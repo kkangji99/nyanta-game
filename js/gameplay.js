@@ -40,6 +40,7 @@ function damage(e,d,vx,vy){
   }
 }
 function hurt(d){
+  if(fever>0) return;   // 집사 찬스 중에는 무적
   P.hp-=d; P.inv=.6; shake=9; popText(P.x,P.y-30,'-'+d,'#d23a44');
   burst(P.x,P.y,6,['#f0a050','#ffffff'],120);
   if(P.hp<=0){ P.hp=0; end(false); }
@@ -50,14 +51,28 @@ function update(dt){
   if(T>=GAME_LEN){ end(true); return; }
   // move
   let mx=0,my=0;
-  if(keys.arrowleft||keys.a) mx--; if(keys.arrowright||keys.d) mx++;
-  if(keys.arrowup||keys.w) my--; if(keys.arrowdown||keys.s) my++;
-  if(joy){ const dx=joy.x-joy.ox, dy=joy.y-joy.oy, l=Math.hypot(dx,dy); if(l>6){ const m=Math.min(1,l/50); mx=dx/l*m; my=dy/l*m; } }
+  if(keys.left) mx--; if(keys.right) mx++;
+  if(keys.up) my--; if(keys.down) my++;
+  if(joy){ const dx=joy.x-joy.ox, dy=joy.y-joy.oy, l=Math.hypot(dx,dy); if(l>6){ const m=Math.min(1,l/JOY_R); mx=dx/l*m; my=dy/l*m; } }
   const ml=Math.hypot(mx,my); if(ml>1){ mx/=ml; my/=ml; }
-  P.x=clamp(P.x+mx*S.speed*dt,-AW+P.r,AW-P.r); P.y=clamp(P.y+my*S.speed*dt,-AH+P.r,AH-P.r); P.moving=ml>.05;
+  // 목표 속도로 부드럽게 가속·감속 (프레임레이트와 무관한 지수 보간)
+  const sp=S.speed*(fever>0?1.3:1), acc=1-Math.exp(-dt*(ml>.05?18:14));
+  P.vx+=(mx*sp-P.vx)*acc; P.vy+=(my*sp-P.vy)*acc;
+  const nx=clamp(P.x+P.vx*dt,-AW+P.r,AW-P.r), ny=clamp(P.y+P.vy*dt,-AH+P.r,AH-P.r);
+  if(nx!==P.x+P.vx*dt) P.vx=0; if(ny!==P.y+P.vy*dt) P.vy=0;   // 울타리에 닿으면 그 방향 속도 제거
+  P.x=nx; P.y=ny; P.moving=Math.hypot(P.vx,P.vy)>20;
   if(Math.abs(mx)>.1) P.face=mx>0?1:-1;
   if(P.inv>0) P.inv-=dt;
   if(S.regen) P.hp=Math.min(P.max,P.hp+S.regen*dt);
+
+  // 집사 찬스: FEVER_EVERY초마다 FEVER_LEN초 동안 무적·연사·이동속도 증가
+  if(fever>0) fever=Math.max(0,fever-dt);
+  if(Math.floor(T/FEVER_EVERY)>feverN && T<GAME_LEN-3){
+    feverN++; fever=FEVER_LEN; fireT=0;
+    P.hp=Math.min(P.max,P.hp+20); popText(P.x,P.y-34,'+20','#2d6a4f');
+    burst(P.x,P.y,30,['#f2c14e','#fff3c4','#ffffff'],260);
+    banner(`집사 찬스! ${FEVER_LEN}초간 무적 · 연사`);
+  }
 
   // spawns & events
   spawnT-=dt;
@@ -71,7 +86,7 @@ function update(dt){
     const tg=nearest(540);
     if(tg){ const a=Math.atan2(tg.y-P.y,tg.x-P.x);
       for(let i=0;i<S.count;i++){ const o=(i-(S.count-1)/2)*.16; shots.push({x:P.x,y:P.y-6,vx:Math.cos(a+o)*430,vy:Math.sin(a+o)*430,life:1.3,pierce:S.pierce,hit:new Set()}); }
-      fireT=S.cd;
+      fireT=S.cd*(fever>0?.33:1);
     } else fireT=.1;
   }
   if(S.canes){ caneT-=dt; if(caneT<=0){ caneT=2.2; const a0=Math.random()*TAU;
@@ -112,7 +127,7 @@ function update(dt){
   // hits
   for(const s of shots){ if(s.life<=0) continue;
     for(const e of E){ if(e.dead||s.hit.has(e)) continue;
-      const dx=e.x-s.x, dy=e.y-s.y; if(dx*dx+dy*dy<(e.r+6)**2){ damage(e,S.dmg,s.vx,s.vy); s.hit.add(e); burst(s.x,s.y,3,['#ffffff','#cfe2f1'],80); if(s.pierce--<=0){ s.life=0; break; } } } }
+      const dx=e.x-s.x, dy=e.y-s.y; if(dx*dx+dy*dy<(e.r+6)**2){ damage(e,S.dmg*(fever>0?1.5:1),s.vx,s.vy); s.hit.add(e); burst(s.x,s.y,3,['#ffffff','#cfe2f1'],80); if(s.pierce--<=0){ s.life=0; break; } } } }
   const caneDmg=14+S.dmg*.7;
   for(const c of canes){ for(const e of E){ if(e.dead||c.hit.has(e)) continue;
     const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy<(e.r+12)**2){ damage(e,caneDmg,c.vx,c.vy); c.hit.add(e); } } }
@@ -125,7 +140,7 @@ function update(dt){
 
   // pickups
   for(const g of gems){ const dx=P.x-g.x, dy=P.y-g.y, l=Math.hypot(dx,dy)||1;
-    if(l<S.magnet||g.pull){ g.pull=true; const v=260+Math.max(0,420-l); g.x+=dx/l*v*dt; g.y+=dy/l*v*dt; }
+    if(l<S.magnet||g.pull||(fever>0&&l<600)){ g.pull=true; const v=260+Math.max(0,420-l); g.x+=dx/l*v*dt; g.y+=dy/l*v*dt; }
     if(l<P.r+8){ g.dead=true; P.xp+=g.v; fishGot+=g.v; } }
   for(const it of items){ const dx=P.x-it.x, dy=P.y-it.y, l=Math.hypot(dx,dy)||1;
     if(l<60){ it.x+=dx/l*220*dt; it.y+=dy/l*220*dt; }

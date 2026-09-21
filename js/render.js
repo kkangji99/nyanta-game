@@ -62,7 +62,8 @@ function render(rt){
   const mg=70;
   camX = W/2-mg>=AW ? 0 : clamp(P.x,-AW-mg+W/2,AW+mg-W/2);
   camY = H/2-mg>=AH ? 0 : clamp(P.y,-AH-mg+H/2,AH+mg-H/2);
-  ctx.save(); ctx.translate(Math.round(W/2-camX+sx),Math.round(H/2-camY+sy));
+  // 반올림하지 않음: 카메라만 정수로 맞추면 소수 좌표의 냥타가 1px씩 떨려 보임
+  ctx.save(); ctx.translate(W/2-camX+sx,H/2-camY+sy);
   drawGround(rt);
   drawFence();
   drawTrees(rt,true);
@@ -75,7 +76,12 @@ function render(rt){
   const actors=E.slice(); actors.push(P); actors.sort((a,b)=>a.y-b.y);
   for(const a of actors){
     if(a===P){
-      if(P.inv>0 && Math.floor(rt*20)%2 && state==='play') continue;
+      if(P.inv>0 && fever<=0 && Math.floor(rt*20)%2 && state==='play') continue;
+      if(fever>0){   // 집사 찬스 오라
+        const pulse=1+Math.sin(rt*10)*.08, a=Math.min(1,fever)*.55;
+        ctx.fillStyle=`rgba(242,193,78,${a*.35})`; circ(ctx,P.x,P.y-4,34*pulse);
+        ctx.strokeStyle=`rgba(242,193,78,${a})`; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(P.x,P.y-4,30*pulse,0,TAU); ctx.stroke();
+      }
       drawCat(ctx,P.x,P.y,P.face,rt,P.moving);
     } else {
       if(a.x<gx0-60||a.x>gx1+60||a.y<gy0-60||a.y>gy1+80) continue;
@@ -91,7 +97,9 @@ function render(rt){
   drawTrees(rt,false);
   for(let i=0;i<S.bells;i++){ const a=T*3.2+i*TAU/S.bells; drawBell(ctx,P.x+Math.cos(a)*74,P.y+Math.sin(a)*74,1); }
   for(const c of canes) drawCane(ctx,c.x,c.y,c.rot,1.2);
-  const ball=sprite('ball',16,16,8,8,2,g=>drawSnowball(g,0,0,6));
+  const ball = fever>0
+    ? sprite('ballG',20,20,10,10,2,g=>{ g.fillStyle='rgba(242,193,78,.55)'; circ(g,0,0,9); drawSnowball(g,0,0,6); })
+    : sprite('ball',16,16,8,8,2,g=>drawSnowball(g,0,0,6));
   for(const s of shots) blit(ball,s.x,s.y,1);
   for(const f of foes) drawShard(ctx,f.x,f.y,f.r,Math.atan2(f.vy,f.vx));
   for(const p of parts){ p.x+=p.vx*rdt; p.y+=p.vy*rdt; p.vx*=.93; p.vy*=.93; p.life-=rdt; ctx.globalAlpha=Math.max(0,Math.min(1,p.life*2)); ctx.fillStyle=p.col; circ(ctx,p.x,p.y,p.r); }
@@ -112,6 +120,10 @@ function render(rt){
     vgKey=key;
   }
   ctx.fillStyle=vgGrad; ctx.fillRect(0,0,W,H);
+  if(fever>0){   // 집사 찬스 중 화면 가장자리를 따뜻한 금빛으로
+    const a=Math.min(1,fever)*(.28+Math.sin(rt*6)*.06);
+    ctx.strokeStyle=`rgba(242,193,78,${a})`; ctx.lineWidth=18; ctx.strokeRect(0,0,W,H);
+  }
 
   // snowfall (한 경로로 모아 한 번에 fill)
   ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath();
@@ -120,8 +132,8 @@ function render(rt){
     const x=f.x*W, y=f.y*H; ctx.moveTo(x+f.r,y); ctx.arc(x,y,f.r,0,TAU); }
   ctx.fill();
 
-  if(joy && state==='play'){ const dx=joy.x-joy.ox, dy=joy.y-joy.oy, l=Math.hypot(dx,dy), m=Math.min(l,50)/(l||1);
-    ctx.fillStyle='rgba(15,24,48,.18)'; circ(ctx,joy.ox,joy.oy,50);
+  if(joy && state==='play'){ const dx=joy.x-joy.ox, dy=joy.y-joy.oy, l=Math.hypot(dx,dy), m=Math.min(l,JOY_R)/(l||1);
+    ctx.fillStyle='rgba(15,24,48,.18)'; circ(ctx,joy.ox,joy.oy,JOY_R);
     ctx.fillStyle='rgba(15,24,48,.45)'; circ(ctx,joy.ox+dx*m,joy.oy+dy*m,20); }
 
   // HUD
@@ -129,12 +141,14 @@ function render(rt){
     setHud('hpFill','w',(P.hp/P.max*100).toFixed(1)+'%'); setHud('hpTxt','t',Math.ceil(P.hp));
     setHud('xpFill','w',Math.min(100,P.xp/P.next*100).toFixed(1)+'%');
     setHud('clock','t',fmt(GAME_LEN-T).padStart(5,'0')); setHud('lv','t',P.level); setHud('kills','t',kills);
+    setHud('fever','h',fever<=0||state==='over'||state==='win'); setHud('feverSec','t',Math.ceil(fever));
+    setHud('feverFill','w',(fever/FEVER_LEN*100).toFixed(1)+'%');
   }
 }
 // HUD 요소는 한 번만 찾아두고, 값이 바뀐 경우에만 DOM에 씀
 const hudEl={}, hudVal={};
-['hud','hpFill','hpTxt','xpFill','clock','lv','kills'].forEach(id=>hudEl[id]=$(id));
+['hud','hpFill','hpTxt','xpFill','clock','lv','kills','fever','feverSec','feverFill'].forEach(id=>hudEl[id]=$(id));
 function setHud(id,kind,v){
   if(hudVal[id]===v) return; hudVal[id]=v;
-  if(kind==='w') hudEl[id].style.width=v; else hudEl[id].textContent=v;
+  if(kind==='w') hudEl[id].style.width=v; else if(kind==='h') hudEl[id].hidden=v; else hudEl[id].textContent=v;
 }

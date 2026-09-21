@@ -29,6 +29,12 @@ body{background:var(--night);color:var(--ink);font-family:"Gowun Dodum",system-u
 #pauseBtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #banner{position:absolute;left:50%;top:96px;transform:translate(-50%,-8px);background:rgba(15,24,48,.9);color:var(--gold);font-family:"Jua",sans-serif;font-size:20px;padding:8px 18px;border-radius:14px;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
 #banner.show{opacity:1;transform:translate(-50%,0)}
+#fever{position:absolute;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(15,24,48,.88);border:1.5px solid var(--gold);border-radius:14px;padding:8px 14px;pointer-events:none;box-shadow:0 0 18px rgba(242,193,78,.35)}
+.fever-t{font-family:"Jua",sans-serif;font-size:18px;color:var(--gold);white-space:nowrap}
+.fever-bar{width:clamp(80px,24vw,160px);height:10px;background:#2a3552;border-radius:5px;overflow:hidden}
+.fever-bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#f2c14e,#fff3c4)}
+#feverSec{font-family:"Jua",sans-serif;font-weight:400;font-size:18px;color:#fff}
+.fever-u{font-size:12px;color:var(--muted);margin-left:-6px}
 
 /* Overlays */
 .ov{position:absolute;inset:0;display:grid;place-items:center;padding:16px;background:rgba(9,14,30,.6);overflow:auto}
@@ -45,6 +51,7 @@ body{background:var(--night);color:var(--ink);font-family:"Gowun Dodum",system-u
 .legend span{font-size:12px;color:var(--muted);line-height:1.4}
 .legend canvas,.card canvas{width:44px;height:44px}
 .controls{font-size:13px;color:var(--muted);line-height:1.6;margin:0}
+.controls .hl{color:var(--gold);font-weight:400}
 kbd{font:12px/1 ui-monospace,Consolas,monospace;background:var(--card2);border-radius:5px;padding:2px 5px;color:var(--ink)}
 .btn{justify-self:stretch;border:0;border-radius:14px;padding:14px 18px;background:var(--red);color:#fff;font-family:"Jua",sans-serif;font-size:22px;cursor:pointer;box-shadow:0 4px 0 #8e1f28;transition:transform .08s,box-shadow .08s}
 .btn:hover{background:#e0444e}
