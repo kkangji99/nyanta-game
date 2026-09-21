@@ -73,6 +73,15 @@
   </section>
 </div>
 
-<script src="game.js"></script>
+<!-- 순서대로 불러와야 함: 앞 파일의 상수·함수를 뒤 파일이 사용 -->
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/state.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/gameplay.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
