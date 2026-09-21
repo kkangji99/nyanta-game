@@ -56,8 +56,11 @@ function update(dt){
   if(joy){ const dx=joy.x-joy.ox, dy=joy.y-joy.oy, l=Math.hypot(dx,dy); if(l>6){ const m=Math.min(1,l/JOY_R); mx=dx/l*m; my=dy/l*m; } }
   const ml=Math.hypot(mx,my); if(ml>1){ mx/=ml; my/=ml; }
   // 목표 속도로 부드럽게 가속·감속 (프레임레이트와 무관한 지수 보간)
-  const sp=S.speed*(fever>0?1.3:1), acc=1-Math.exp(-dt*(ml>.05?18:14));
-  P.vx+=(mx*sp-P.vx)*acc; P.vy+=(my*sp-P.vy)*acc;
+  const sp=S.speed*(fever>0?1.3:1), acc=1-Math.exp(-dt*(ml>.05?40:28));
+  const tx=mx*sp, ty=my*sp;
+  // 반대 방향으로 꺾으면 그 축의 기존 속도를 바로 버려서 방향 전환이 즉각적임
+  if(tx*P.vx<0) P.vx=0; if(ty*P.vy<0) P.vy=0;
+  P.vx+=(tx-P.vx)*acc; P.vy+=(ty-P.vy)*acc;
   const nx=clamp(P.x+P.vx*dt,-AW+P.r,AW-P.r), ny=clamp(P.y+P.vy*dt,-AH+P.r,AH-P.r);
   if(nx!==P.x+P.vx*dt) P.vx=0; if(ny!==P.y+P.vy*dt) P.vy=0;   // 울타리에 닿으면 그 방향 속도 제거
   P.x=nx; P.y=ny; P.moving=Math.hypot(P.vx,P.vy)>20;
