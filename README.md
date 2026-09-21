@@ -4,6 +4,10 @@
 
 **▶ 플레이하기: https://kkangji99.github.io/nyanta-game/**
 
+| 타이틀 | 플레이 |
+|---|---|
+| ![타이틀 화면](screenshots/title.png) | ![눈사람 군단과 선물 도둑 쥐 사이에서 캔디케인 부메랑과 징글벨로 버티는 냥타](screenshots/gameplay.png) |
+
 `index.html` 하나로 동작하며 빌드가 필요 없습니다. 브라우저로 열면 바로 플레이할 수 있습니다.
 
 ## 조작
