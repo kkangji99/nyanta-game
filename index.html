@@ -150,10 +150,13 @@ h2.display{margin:0;font-size:32px;line-height:1.15;text-wrap:balance}
 (() => {
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
-let W = 0, H = 0, DPR = 1;
+let W = 0, H = 0, DPR = 1, vgKey = '', vgGrad = null;
 function resize(){
   const r = cv.getBoundingClientRect();
-  W = r.width; H = r.height; DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = r.width; H = r.height;
+  // 큰 화면에서 캔버스 픽셀 수가 과도하게 커지지 않도록 제한
+  DPR = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(3.5e6 / Math.max(1, W * H)));
+  vgKey = '';
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
 }
 addEventListener('resize', resize); resize();
@@ -167,6 +170,22 @@ let camX=0, camY=0;
 /* ---------- sprites ---------- */
 function ell(g,x,y,rx,ry){ g.beginPath(); g.ellipse(x,y,rx,ry,0,0,TAU); g.fill(); }
 function circ(g,x,y,r){ g.beginPath(); g.arc(x,y,r,0,TAU); g.fill(); }
+
+// 벡터 스프라이트를 오프스크린 캔버스에 한 번만 그려두고 drawImage로 재사용
+const SPR = new Map();
+function sprite(key,w,h,ox,oy,k,fn){
+  let s=SPR.get(key);
+  if(!s){
+    const c=document.createElement('canvas'); c.width=Math.ceil(w*k); c.height=Math.ceil(h*k);
+    const g=c.getContext('2d'); g.scale(k,k); g.translate(ox,oy); fn(g);
+    s={c,w,h,ox,oy}; SPR.set(key,s);
+  }
+  return s;
+}
+function blit(s,x,y,sc){ ctx.drawImage(s.c,x-s.ox*sc,y-s.oy*sc,s.w*sc,s.h*sc); }
+function blitRot(s,x,y,sc,rot){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); blit(s,0,0,sc); ctx.restore(); }
+// 배열을 새로 만들지 않고 제자리에서 걸러냄
+function sweep(a,keep){ let j=0; for(let i=0;i<a.length;i++){ const o=a[i]; if(keep(o)) a[j++]=o; } a.length=j; }
 
 function drawCat(g,x,y,f,t,moving){
   g.save(); g.translate(x,y);
@@ -330,15 +349,18 @@ function drawTree(g,x,y,s,lights,t){
     g.fillStyle='#2d6a4f'; g.beginPath(); g.moveTo(cx,by-h-6); g.lineTo(cx+hw,by); g.lineTo(cx+2,by); g.closePath(); g.fill();
     g.fillStyle='#f4f8fb'; g.beginPath(); g.moveTo(cx-hw*.55,by-h*.55); g.lineTo(cx,by-h-6); g.lineTo(cx+hw*.55,by-h*.55); g.quadraticCurveTo(cx,by-h*.35,cx-hw*.55,by-h*.55); g.fill();
   }
-  if(lights){
-    const cols=['#f2c14e','#d23a44','#8fd0ff','#f2c14e'];
-    const pts=[[-14,-10],[10,-12],[-8,-25],[9,-27],[-3,-38],[5,-8]];
-    pts.forEach((p,i)=>{ const on=(Math.sin(t*3+i*1.7)+1)/2;
-      g.fillStyle=cols[i%4]; g.globalAlpha=.55+on*.45; circ(g,p[0],p[1],2.2); });
-    g.globalAlpha=1;
-    g.fillStyle='#f2c14e'; g.beginPath();
-    for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5, rr=i%2?2.4:5.5; g.lineTo(Math.cos(a)*rr,-58+Math.sin(a)*rr);} g.fill();
-  }
+  if(lights) drawTreeLights(g,0,0,1,t);
+  g.restore();
+}
+const LIGHT_COLS=['#f2c14e','#d23a44','#8fd0ff','#f2c14e'];
+const LIGHT_PTS=[[-14,-10],[10,-12],[-8,-25],[9,-27],[-3,-38],[5,-8]];
+function drawTreeLights(g,x,y,s,t){
+  g.save(); g.translate(x,y); g.scale(s,s);
+  LIGHT_PTS.forEach((p,i)=>{ const on=(Math.sin(t*3+i*1.7)+1)/2;
+    g.fillStyle=LIGHT_COLS[i%4]; g.globalAlpha=.55+on*.45; circ(g,p[0],p[1],2.2); });
+  g.globalAlpha=1;
+  g.fillStyle='#f2c14e'; g.beginPath();
+  for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5, rr=i%2?2.4:5.5; g.lineTo(Math.cos(a)*rr,-58+Math.sin(a)*rr);} g.fill();
   g.restore();
 }
 
@@ -432,7 +454,9 @@ const endJoy=e=>{ if(joy&&e.pointerId===joy.id) joy=null; };
 cv.addEventListener('pointerup',endJoy); cv.addEventListener('pointercancel',endJoy);
 
 /* ---------- flow ---------- */
-function show(id){ ['ovTitle','ovChoose','ovPause','ovEnd'].forEach(o=>$(o).hidden=o!==id); }
+let redraw=true;
+function show(id){ ['ovTitle','ovChoose','ovPause','ovEnd'].forEach(o=>$(o).hidden=o!==id); redraw=true; }
+addEventListener('resize',()=>{ redraw=true; });
 function start(){ reset(); state='play'; show(null); $('hud').hidden=false; banner('눈사람 군단이 몰려온다!'); }
 function pause(){ state='pause'; joy=null; show('ovPause'); $('resumeBtn').focus(); }
 function resume(){ state='play'; show(null); }
@@ -614,8 +638,8 @@ function update(dt){
       if(it.kind==='churu'){ const h=Math.min(30,P.max-P.hp); P.hp+=h; popText(P.x,P.y-34,'+'+Math.round(h),'#2d6a4f'); burst(P.x,P.y,8,['#f39a3d','#fff6ea'],110); }
       else { pendingGift++; burst(it.x,it.y,14,['#d23a44','#f2c14e','#ffffff'],170); } } }
 
-  shots=shots.filter(s=>s.life>0); canes=canes.filter(c=>!c.dead); E=E.filter(e=>!e.dead);
-  gems=gems.filter(g=>!g.dead); items=items.filter(i=>!i.dead); foes=foes.filter(f=>f.life>0);
+  sweep(shots,s=>s.life>0); sweep(canes,c=>!c.dead); sweep(E,e=>!e.dead);
+  sweep(gems,g=>!g.dead); sweep(items,i=>!i.dead); sweep(foes,f=>f.life>0);
 
   while(P.xp>=P.next){ P.xp-=P.next; P.level++; P.next=Math.floor(6+P.level*3.2+P.level*P.level*.25); pending++; }
   if(pending>0||pendingGift>0){ burst(P.x,P.y,16,['#f2c14e','#ffffff'],180); openChoice(); }
@@ -627,14 +651,21 @@ const CELL=170;
 function drawGround(rt){
   const x0=Math.floor((camX-W/2)/CELL)-1, x1=Math.floor((camX+W/2)/CELL)+1;
   const y0=Math.floor((camY-H/2)/CELL)-1, y1=Math.floor((camY+H/2)/CELL)+2;
-  // sparkles & drifts first
+  // 같은 색끼리 한 경로로 모아서 fill 호출 수를 줄임
+  const drift=new Path2D(), driftTop=new Path2D(), prints=new Path2D(), sparkle=new Path2D();
   for(let iy=y0;iy<=y1;iy++) for(let ix=x0;ix<=x1;ix++){
     const h=hash(ix,iy), h2=hash(ix+99,iy-7), h3=hash(ix-31,iy+53);
     const x=ix*CELL+h2*CELL, y=iy*CELL+h3*CELL;
-    if(h>=.16 && h<.3){ ctx.fillStyle='#d3dfeb'; ell(ctx,x,y,38*(.7+h2*.6),11); ctx.fillStyle='#f4f8fb'; ell(ctx,x-4,y-3,30*(.7+h2*.6),8); }
-    else if(h>=.3 && h<.55){ ctx.fillStyle='#cfdbe7'; for(let k=0;k<4;k++){ circ(ctx,x+k*14,y+(k%2)*8,2.2); } }
-    ctx.fillStyle='rgba(255,255,255,.9)'; circ(ctx,ix*CELL+h3*CELL,iy*CELL+h*CELL,1.4);
+    if(h>=.16 && h<.3){ const w=.7+h2*.6;
+      drift.moveTo(x+38*w,y); drift.ellipse(x,y,38*w,11,0,0,TAU);
+      driftTop.moveTo(x-4+30*w,y-3); driftTop.ellipse(x-4,y-3,30*w,8,0,0,TAU); }
+    else if(h>=.3 && h<.55){ for(let k=0;k<4;k++){ const px=x+k*14, py=y+(k%2)*8; prints.moveTo(px+2.2,py); prints.arc(px,py,2.2,0,TAU); } }
+    const sx=ix*CELL+h3*CELL, sy=iy*CELL+h*CELL; sparkle.moveTo(sx+1.4,sy); sparkle.arc(sx,sy,1.4,0,TAU);
   }
+  ctx.fillStyle='#d3dfeb'; ctx.fill(drift);
+  ctx.fillStyle='#f4f8fb'; ctx.fill(driftTop);
+  ctx.fillStyle='#cfdbe7'; ctx.fill(prints);
+  ctx.fillStyle='rgba(255,255,255,.9)'; ctx.fill(sparkle);
   // 울타리 밖은 깊은 숲 그늘
   ctx.fillStyle='rgba(60,85,120,.28)'; ctx.beginPath();
   ctx.rect(camX-W,camY-H,W*2,H*2); ctx.rect(-AW,-AH,AW*2,AH*2); ctx.fill('evenodd');
@@ -645,8 +676,11 @@ function drawFence(){
   for(const oy of [-12,-5]){ ctx.moveTo(-AW,-AH+oy); ctx.lineTo(AW,-AH+oy); ctx.moveTo(-AW,AH+oy); ctx.lineTo(AW,AH+oy); }
   ctx.moveTo(-AW,-AH); ctx.lineTo(-AW,AH); ctx.moveTo(AW,-AH); ctx.lineTo(AW,AH);
   ctx.stroke();
-  for(let x=-AW;x<=AW;x+=48){ post(x,-AH); post(x,AH); }
-  for(let y=-AH+48;y<AH;y+=48){ post(-AW,y); post(AW,y); }
+  // 화면에 보이는 기둥만 그림
+  const vx0=camX-W/2-10, vx1=camX+W/2+10, vy0=camY-H/2-10, vy1=camY+H/2+30;
+  const topV=-AH>vy0&&-AH<vy1, botV=AH>vy0&&AH<vy1, lefV=-AW>vx0&&-AW<vx1, rigV=AW>vx0&&AW<vx1;
+  for(let x=-AW;x<=AW;x+=48){ if(x<vx0||x>vx1) continue; if(topV) post(x,-AH); if(botV) post(x,AH); }
+  for(let y=-AH+48;y<AH;y+=48){ if(y<vy0||y>vy1) continue; if(lefV) post(-AW,y); if(rigV) post(AW,y); }
 }
 function drawTrees(rt,before){
   const x0=Math.floor((camX-W/2)/CELL)-1, x1=Math.floor((camX+W/2)/CELL)+1;
@@ -657,7 +691,9 @@ function drawTrees(rt,before){
     const inside=Math.abs(x)<AW+30&&Math.abs(y)<AH+70;
     if(inside ? (h>=.12||Math.abs(x)>AW-60||Math.abs(y)>AH-70) : h>=.7) continue;
     if((y<P.y)!==before) continue;
-    drawTree(ctx,x,y,.9+h2*.6,h<.05,rt);
+    const sc=.9+h2*.6;
+    blit(sprite('tree',52,68,26,58,3,g=>drawTree(g,0,0,1,false,0)),x,y,sc);
+    if(h<.05) drawTreeLights(ctx,x,y,sc,rt);
   }
 }
 
@@ -676,7 +712,10 @@ function render(rt){
   drawGround(rt);
   drawFence();
   drawTrees(rt,true);
-  for(const g of gems) drawFish(ctx,g.x,g.y+Math.sin(rt*3+g.ph)*2,g.v>=5?1.15:.8,Math.sin(rt*2+g.ph)*.3,g.v>=5);
+  const fishN=sprite('fish',32,18,17,9,3,g=>drawFish(g,0,0,1,0,false)), fishG=sprite('fishG',32,18,17,9,3,g=>drawFish(g,0,0,1,0,true));
+  const gx0=camX-W/2-20, gx1=camX+W/2+20, gy0=camY-H/2-20, gy1=camY+H/2+20;
+  for(const g of gems){ if(g.x<gx0||g.x>gx1||g.y<gy0||g.y>gy1) continue;
+    const gold=g.v>=5; blitRot(gold?fishG:fishN,g.x,g.y+Math.sin(rt*3+g.ph)*2,gold?1.15:.8,Math.sin(rt*2+g.ph)*.3); }
   for(const it of items){ if(it.kind==='churu') drawChuru(ctx,it.x,it.y+Math.sin(rt*3+it.ph)*2,.9,.4); else drawGift(ctx,it.x,it.y+Math.sin(rt*4)*1.5,1.1); }
   // y-sorted actors
   const actors=E.slice(); actors.push(P); actors.sort((a,b)=>a.y-b.y);
@@ -684,45 +723,66 @@ function render(rt){
     if(a===P){
       if(P.inv>0 && Math.floor(rt*20)%2 && state==='play') continue;
       drawCat(ctx,P.x,P.y,P.face,rt,P.moving);
-    } else if(a.type==='mouse') drawMouse(ctx,a.x,a.y,a.r,a.face,a.flash,a.wob);
-    else drawSnowman(ctx,a.x,a.y,a.r,a.face,a.flash,a.wob,a.type);
+    } else {
+      if(a.x<gx0-60||a.x>gx1+60||a.y<gy0-60||a.y>gy1+80) continue;
+      const r=a.r, fl=a.flash>0?1:0;
+      if(a.type==='mouse'){
+        blit(sprite(`m${r}${a.face}${fl}`,4.2*r,3*r,2.1*r,1.7*r,2,g=>drawMouse(g,0,0,r,a.face,fl,0)),a.x,a.y-Math.abs(Math.sin(a.wob*2))*2,1);
+      } else {
+        blitRot(sprite(`s${a.type}${r}${a.face}${fl}`,2.3*r+4,2.85*r+4,1.15*r+2,1.52*r+2,2,g=>drawSnowman(g,0,0,r,a.face,fl,0,a.type)),a.x,a.y,1,Math.sin(a.wob)*.07);
+      }
+    }
     if(a.type==='boss'){ ctx.fillStyle='rgba(15,24,48,.8)'; ctx.fillRect(a.x-40,a.y-a.r*1.75,80,7); ctx.fillStyle='#8fd0ff'; ctx.fillRect(a.x-39,a.y-a.r*1.75+1,78*Math.max(0,a.hp/a.max),5); }
   }
   drawTrees(rt,false);
   for(let i=0;i<S.bells;i++){ const a=T*3.2+i*TAU/S.bells; drawBell(ctx,P.x+Math.cos(a)*74,P.y+Math.sin(a)*74,1); }
   for(const c of canes) drawCane(ctx,c.x,c.y,c.rot,1.2);
-  for(const s of shots) drawSnowball(ctx,s.x,s.y,6);
+  const ball=sprite('ball',16,16,8,8,2,g=>drawSnowball(g,0,0,6));
+  for(const s of shots) blit(ball,s.x,s.y,1);
   for(const f of foes) drawShard(ctx,f.x,f.y,f.r,Math.atan2(f.vy,f.vx));
   for(const p of parts){ p.x+=p.vx*rdt; p.y+=p.vy*rdt; p.vx*=.93; p.vy*=.93; p.life-=rdt; ctx.globalAlpha=Math.max(0,Math.min(1,p.life*2)); ctx.fillStyle=p.col; circ(ctx,p.x,p.y,p.r); }
-  ctx.globalAlpha=1; parts=parts.filter(p=>p.life>0);
+  ctx.globalAlpha=1; sweep(parts,p=>p.life>0);
   ctx.font='14px Jua, "Malgun Gothic", sans-serif'; ctx.textAlign='center';
   for(const t of texts){ t.y-=28*rdt; t.life-=rdt; ctx.globalAlpha=Math.max(0,Math.min(1,t.life*2)); ctx.fillStyle=t.col; ctx.fillText(t.txt,t.x,t.y); }
-  ctx.globalAlpha=1; texts=texts.filter(t=>t.life>0);
+  ctx.globalAlpha=1; sweep(texts,t=>t.life>0);
   ctx.restore();
 
   // night sky that warms toward Christmas morning
-  const dawn=Math.min(1,T/GAME_LEN);
-  const vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.28,W/2,H/2,Math.hypot(W,H)*.6);
-  vg.addColorStop(0,'rgba(15,24,48,0)');
-  vg.addColorStop(1,`rgba(${15+dawn*120|0},${24+dawn*60|0},${48+dawn*30|0},${.62-dawn*.3})`);
-  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  // 그라디언트는 화면 크기나 새벽 단계(1초 단위)가 바뀔 때만 새로 만듦
+  const dawnStep=Math.min(GAME_LEN,Math.floor(T)), key=W+'x'+H+':'+dawnStep;
+  if(key!==vgKey){
+    const dawn=dawnStep/GAME_LEN;
+    vgGrad=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.28,W/2,H/2,Math.hypot(W,H)*.6);
+    vgGrad.addColorStop(0,'rgba(15,24,48,0)');
+    vgGrad.addColorStop(1,`rgba(${15+dawn*120|0},${24+dawn*60|0},${48+dawn*30|0},${.62-dawn*.3})`);
+    vgKey=key;
+  }
+  ctx.fillStyle=vgGrad; ctx.fillRect(0,0,W,H);
 
-  // snowfall
-  ctx.fillStyle='rgba(255,255,255,.9)';
+  // snowfall (한 경로로 모아 한 번에 fill)
+  ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath();
   for(const f of flakes){ if(!RM){ f.y+=f.s*rdt/H; f.x+=Math.sin(rt+f.ph)*8*rdt/W; }
     if(f.y>1.02){ f.y=-.02; f.x=Math.random(); } if(f.x<0) f.x+=1; if(f.x>1) f.x-=1;
-    circ(ctx,f.x*W,f.y*H,f.r); }
+    const x=f.x*W, y=f.y*H; ctx.moveTo(x+f.r,y); ctx.arc(x,y,f.r,0,TAU); }
+  ctx.fill();
 
   if(joy && state==='play'){ const dx=joy.x-joy.ox, dy=joy.y-joy.oy, l=Math.hypot(dx,dy), m=Math.min(l,50)/(l||1);
     ctx.fillStyle='rgba(15,24,48,.18)'; circ(ctx,joy.ox,joy.oy,50);
     ctx.fillStyle='rgba(15,24,48,.45)'; circ(ctx,joy.ox+dx*m,joy.oy+dy*m,20); }
 
   // HUD
-  if(!$('hud').hidden){
-    $('hpFill').style.width=(P.hp/P.max*100)+'%'; $('hpTxt').textContent=Math.ceil(P.hp);
-    $('xpFill').style.width=Math.min(100,P.xp/P.next*100)+'%';
-    $('clock').textContent=fmt(GAME_LEN-T).padStart(5,'0'); $('lv').textContent=P.level; $('kills').textContent=kills;
+  if(!hudEl.hud.hidden){
+    setHud('hpFill','w',(P.hp/P.max*100).toFixed(1)+'%'); setHud('hpTxt','t',Math.ceil(P.hp));
+    setHud('xpFill','w',Math.min(100,P.xp/P.next*100).toFixed(1)+'%');
+    setHud('clock','t',fmt(GAME_LEN-T).padStart(5,'0')); setHud('lv','t',P.level); setHud('kills','t',kills);
   }
+}
+// HUD 요소는 한 번만 찾아두고, 값이 바뀐 경우에만 DOM에 씀
+const hudEl={}, hudVal={};
+['hud','hpFill','hpTxt','xpFill','clock','lv','kills'].forEach(id=>hudEl[id]=$(id));
+function setHud(id,kind,v){
+  if(hudVal[id]===v) return; hudVal[id]=v;
+  if(kind==='w') hudEl[id].style.width=v; else hudEl[id].textContent=v;
 }
 
 let last=performance.now();
@@ -730,7 +790,9 @@ function frame(now){
   const dt=Math.min(.05,(now-last)/1000); last=now;
   if(state==='play') update(dt);
   else if(state==='title'){ const nx=Math.sin(now/5000)*260; P.face=nx>=P.x?1:-1; P.x=nx; P.moving=true; }
-  render(now/1000);
+  // 레벨업·일시정지·결과 화면에서는 게임 화면이 멈춰 있으므로 다시 그리지 않음
+  if(state==='play'||state==='title'||redraw){ render(now/1000); redraw=false; }
+  else lastRT=now/1000;
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
