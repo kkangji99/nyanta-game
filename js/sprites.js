@@ -208,6 +208,29 @@ function drawShard(g,x,y,r,rot){ g.save(); g.translate(x,y); g.rotate(rot);
   g.fillStyle='#bfe3ff'; g.strokeStyle='#5d95c8'; g.lineWidth=1.4;
   g.beginPath(); g.moveTo(r*1.6,0); g.lineTo(0,-r*.7); g.lineTo(-r*1.2,0); g.lineTo(0,r*.7); g.closePath(); g.fill(); g.stroke(); g.restore(); }
 
+// 집사 손: (x,y)가 손바닥 위치, rot 방향으로 손끝이 향함. flip=-1이면 엄지가 반대쪽.
+// 소매는 손 뒤로 len만큼 뻗음, s는 크기 배율
+function drawButlerHand(g,x,y,rot,flip,len,s){
+  const skin='#f7cfb0', shade='#e0a784';
+  g.save(); g.translate(x,y); g.rotate(rot); g.scale(s,s*flip); len/=s;
+  // 크리스마스 스웨터 소매
+  g.fillStyle='#b8323c'; g.beginPath(); g.roundRect(-len,-18,len-8,36,10); g.fill();
+  g.fillStyle='#f4f8fb'; for(let sx=-36;sx>-len;sx-=16){ g.fillRect(sx-3,-3,6,6); }
+  g.fillStyle='#2d6a4f'; g.fillRect(-30,-18,5,36);
+  // 소매 끝 시보리
+  g.fillStyle='#efe6d6'; g.beginPath(); g.roundRect(-18,-19,13,38,5); g.fill();
+  g.strokeStyle='rgba(0,0,0,.1)'; g.lineWidth=1; g.beginPath();
+  for(let i=0;i<3;i++){ g.moveTo(-15+i*3.5,-17); g.lineTo(-15+i*3.5,17); } g.stroke();
+  // 손바닥과 손가락 (냥타 몸을 감싸도록 앞으로 뻗음)
+  g.fillStyle=skin; g.strokeStyle=shade; g.lineWidth=1.2;
+  g.beginPath(); g.roundRect(-7,-15,25,30,11); g.fill(); g.stroke();
+  for(let i=0;i<4;i++){ const fy=-11+i*7.4;
+    g.beginPath(); g.ellipse(23,fy,9.5,3.9,.1+i*.04,0,TAU); g.fill(); g.stroke(); }
+  g.beginPath(); g.ellipse(9,-16,8.5,4.3,-.55,0,TAU); g.fill(); g.stroke();
+  g.fillStyle=skin; g.fillRect(-4,-12,18,24);   // 손가락 뿌리 이음새 가리기
+  g.restore();
+}
+
 const ICONS = {
   fish:g=>drawFish(g,24,24,1.25,-.3),
   churu:g=>drawChuru(g,24,24,1.2,.4),

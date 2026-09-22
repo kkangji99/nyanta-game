@@ -70,8 +70,20 @@ function update(dt){
 
   // 집사 찬스: FEVER_EVERY초마다 FEVER_LEN초 동안 무적·연사·이동속도 증가
   if(fever>0) fever=Math.max(0,fever-dt);
-  if(Math.floor(T/FEVER_EVERY)>feverN && T<GAME_LEN-3){
-    feverN++; fever=FEVER_LEN; fireT=0;
+  if(hug>=0){
+    hug+=dt;
+    if(hug>=HUG_IN && hug<HUG_HOLD && Math.random()<dt*14){   // 양쪽 손 근처와 냥타 위로 ♥
+      const side=Math.floor(Math.random()*3)-1;
+      popText(side ? camX+side*(W/2-70) : P.x+(Math.random()-.5)*36, (side ? camY+H*.12 : P.y-34)+(Math.random()-.5)*50, '♥', '#e0707c');
+    }
+    if(hug>=HUG_LEN) hug=-1;
+  }
+  const testFever=FEVER_TEST && !flags.feverTest && T>=3;
+  if((Math.floor(T/FEVER_EVERY)>feverN || testFever) && T<GAME_LEN-3){
+    if(testFever) flags.feverTest=1; else feverN++;
+    fever=FEVER_LEN; fireT=0;
+    // [보류] 집사 팔이 화면을 액자처럼 끌어안는 애니메이션. 사용하려면 아래 줄과 render.js의 drawHugHand 호출 주석을 해제
+    // hug=0;
     P.hp=Math.min(P.max,P.hp+20); popText(P.x,P.y-34,'+20','#2d6a4f');
     burst(P.x,P.y,30,['#f2c14e','#fff3c4','#ffffff'],260);
     banner(`집사 찬스! ${FEVER_LEN}초간 무적 · 연사`);

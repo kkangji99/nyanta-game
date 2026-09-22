@@ -63,7 +63,8 @@ function render(rt){
   camX = W/2-mg>=AW ? 0 : clamp(P.x,-AW-mg+W/2,AW+mg-W/2);
   camY = H/2-mg>=AH ? 0 : clamp(P.y,-AH-mg+H/2,AH+mg-H/2);
   // 반올림하지 않음: 카메라만 정수로 맞추면 소수 좌표의 냥타가 1px씩 떨려 보임
-  ctx.save(); ctx.translate(W/2-camX+sx,H/2-camY+sy);
+  const hq=hug>=0?hugPose(hug).q:0;   // 집사가 화면을 꼭 안으면 게임 화면이 가로로 살짝 눌림
+  ctx.save(); ctx.translate(W/2,H/2); if(hq>0) ctx.scale(1-.035*hq,1+.012*hq); ctx.translate(-camX+sx,-camY+sy);
   drawGround(rt);
   drawFence();
   drawTrees(rt,true);
@@ -122,8 +123,10 @@ function render(rt){
   ctx.fillStyle=vgGrad; ctx.fillRect(0,0,W,H);
   if(fever>0){   // 집사 찬스 중 화면 가장자리를 따뜻한 금빛으로
     const a=Math.min(1,fever)*(.28+Math.sin(rt*6)*.06);
-    ctx.strokeStyle=`rgba(242,193,78,${a})`; ctx.lineWidth=18; ctx.strokeRect(0,0,W,H);
+    ctx.strokeStyle=`rgba(242,193,78,${a+hq*.25})`; ctx.lineWidth=18+hq*14; ctx.strokeRect(0,0,W,H);
   }
+  // [보류] 집사가 화면을 액자처럼 끌어안는 팔 (gameplay.js의 hug=0 주석과 함께 해제)
+  // if(hug>=0){ drawHugHand(0); drawHugHand(1); }
 
   // snowfall (한 경로로 모아 한 번에 fill)
   ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath();
@@ -144,6 +147,53 @@ function render(rt){
     setHud('fever','h',fever<=0||state==='over'||state==='win'); setHud('feverSec','t',Math.ceil(fever));
     setHud('feverFill','w',(fever/FEVER_LEN*100).toFixed(1)+'%');
   }
+}
+// 안아주기 타임라인: 들어오기(0~0.45s) → 꼭꼭 두 번(~1.05s) → 빠져나가기(~HUG_LEN)
+// d: 냥타 중심에서 각 손바닥까지 거리, q: 꽉 안는 정도(0~1)
+// p: 팔이 곡선을 따라 뻗어 나온 정도(0~1), q: 꽉 안는 정도(0~1)
+const HUG_IN=.5, HUG_HOLD=1.1;
+function hugPose(t){
+  if(t<HUG_IN){ const k=t/HUG_IN; return {p:1-Math.pow(1-k,3),q:0}; }
+  if(t<HUG_HOLD) return {p:1,q:Math.abs(Math.sin((t-HUG_IN)/(HUG_HOLD-HUG_IN)*Math.PI*2))};
+  const k=(t-HUG_HOLD)/(HUG_LEN-HUG_HOLD); return {p:1-k*k,q:0};
+}
+// 3차 베지어 구간들을 점으로 샘플링 (팔을 곡선 길이만큼 부분적으로 그리기 위해)
+function bezierPath(segs,steps){
+  const pts=[[segs[0][0],segs[0][1]]];
+  for(const [x0,y0,x1,y1,x2,y2,x3,y3] of segs) for(let i=1;i<=steps;i++){ const t=i/steps, u=1-t;
+    pts.push([u*u*u*x0+3*u*u*t*x1+3*u*t*t*x2+t*t*t*x3, u*u*u*y0+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3]); }
+  return pts;
+}
+// 화면 좌표에 그림. side 0 = 왼팔, 1 = 오른팔(왼팔을 좌우 반전).
+// 화면 위 가운데(집사 어깨)에서 나와 윗변을 따라 모서리를 돌아 옆변으로 타고 내려오는 액자 같은 팔
+function drawHugHand(side){
+  const {p,q}=hugPose(hug); if(p<=0) return;
+  const s=clamp(Math.min(W,H)/340,1.3,2.3), aw=26*s;
+  const m=aw*.5+2-q*7*s;                 // 팔 중심선이 테두리에서 떨어진 거리 (꼭 안을 때 안쪽으로 조임)
+  const cx=W*.2, ey=H*.66;
+  const pts=bezierPath([
+    [W/2-12*s,-aw, W/2-40*s,m, W*.34,m, cx,m],                       // 어깨에서 윗변으로
+    [cx,m, cx-(cx-m)*.62,m, m,m+(H*.24-m)*.38, m,H*.24],             // 둥근 모서리
+    [m,H*.24, m,H*.42, m-2*s,ey-H*.08, m+14*s,ey],                   // 옆변을 타고 내려오며 끝이 안쪽으로
+  ],22);
+  // 누적 길이로 p만큼만 그림
+  const len=[0]; for(let i=1;i<pts.length;i++) len.push(len[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  const want=len[len.length-1]*p; let n=1; while(n<pts.length-1 && len[n]<want) n++;
+  const vis=pts.slice(0,n+1);
+  const trace=()=>{ ctx.beginPath(); ctx.moveTo(vis[0][0],vis[0][1]); for(let i=1;i<vis.length;i++) ctx.lineTo(vis[i][0],vis[i][1]); };
+  ctx.save();
+  if(side){ ctx.translate(W,0); ctx.scale(-1,1); }
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.shadowColor='rgba(20,30,60,.25)'; ctx.shadowBlur=10*s; ctx.shadowOffsetY=3*s;
+  ctx.strokeStyle='#9c2833'; ctx.lineWidth=aw+3*s; trace(); ctx.stroke();       // 소매 테두리(그림자 포함)
+  ctx.shadowColor='transparent';
+  ctx.strokeStyle='#c23a45'; ctx.lineWidth=aw; trace(); ctx.stroke();           // 소매
+  ctx.strokeStyle='rgba(255,255,255,.16)'; ctx.lineWidth=aw*.35; ctx.save(); ctx.translate(2*s,-2*s); trace(); ctx.stroke(); ctx.restore();   // 둥근 느낌의 하이라이트
+  ctx.strokeStyle='#f4f8fb'; ctx.lineWidth=5*s; ctx.setLineDash([.1,14*s]); trace(); ctx.stroke(); ctx.setLineDash([]);   // 니트 무늬
+  // 팔 끝의 손: 진행 방향으로 향하고, 소매 끝 시보리는 손 함수가 그림
+  const a=vis[vis.length-1], b=vis[Math.max(0,vis.length-3)], ang=Math.atan2(a[1]-b[1],a[0]-b[0]);
+  drawButlerHand(ctx,a[0]+Math.cos(ang)*12*s,a[1]+Math.sin(ang)*12*s,ang,-1,14*s,s*.95);
+  ctx.restore();
 }
 // HUD 요소는 한 번만 찾아두고, 값이 바뀐 경우에만 DOM에 씀
 const hudEl={}, hudVal={};

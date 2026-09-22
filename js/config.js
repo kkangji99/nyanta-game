@@ -4,6 +4,9 @@ const AW = 820, AH = 820;   // 울타리 안쪽 반폭/반높이
 const MAX_E = 80;           // 동시에 나오는 적 최대 수
 const FEVER_EVERY = 120;     // 집사 찬스 주기(초)
 const FEVER_LEN = 10;        // 집사 찬스 지속 시간(초)
+const HUG_LEN = 1.6;         // 집사 손이 안아주는 애니메이션 길이(초)
+// 주소 뒤에 ?fever 를 붙이면 첫 집사 찬스가 3초에 발동 (애니메이션 확인용)
+const FEVER_TEST = /[?&]fever\b/.test(location.search);
 
 /* ---------- upgrades ---------- */
 const UPG = [
