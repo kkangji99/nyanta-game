@@ -4,8 +4,6 @@
 
 **▶ 플레이하기: https://kkangji99.github.io/nyanta-game/**
 
-> ⚠️ **현재 테스트 모드**: 플레이 시간이 1분(`GAME_LEN = 60`)이고, 랭킹 DB도 60초 클리어를 인정하도록 규칙을 완화해 둔 상태입니다. 정식(5분)으로 되돌리는 방법은 [supabase/test-mode.sql](supabase/test-mode.sql)의 [2]를 참고하세요.
-
 | 타이틀 | 플레이 |
 |---|---|
 | ![타이틀 화면](screenshots/title.png) | ![눈사람 군단과 선물 도둑 쥐 사이에서 캔디케인 부메랑과 징글벨로 버티는 냥타](screenshots/gameplay.png) |
@@ -88,7 +86,7 @@
 - `AW`, `AH` — 울타리 맵 반폭/반높이 (기본 820)
 - `MAX_E` — 동시에 나오는 적 최대 수 (기본 80)
 - `HURT_INV` — 피격 후 무적 시간(초, 기본 0.8)
-- `GAME_LEN` — 버텨야 하는 시간(초, 정식 300 / 현재 테스트 60). 보스·쥐떼·집사 찬스·난이도 시간표는 5분 기준으로 짜여 있고 `PACE`로 자동 압축됨
+- `GAME_LEN` — 버텨야 하는 시간(초, 기본 300). 보스·쥐떼·집사 찬스·난이도 시간표는 5분 기준으로 짜여 있고, 값을 줄이면 `PACE`가 자동으로 압축함 (짧게 테스트할 때는 [supabase/test-mode.sql](supabase/test-mode.sql)도 함께 적용)
 - `FEVER_EVERY`, `FEVER_LEN` — 집사 찬스 주기와 지속 시간(초, 기본 120 / 10)
 - `WRATH_AT`, `BOLT_WARN`, `BOLT_R`, `BOLT_DMG` — 눈사람의 분노 시작 시점(5분 기준 초)과 눈벼락 경고 시간·반경·피해
 - `SUPABASE_URL`, `SUPABASE_KEY` — 랭킹 서버 주소와 공개용(publishable) 키
