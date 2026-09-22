@@ -23,6 +23,7 @@ function banner(t){ const b=$('banner'); b.textContent=t; b.classList.add('show'
 function openChoice(){
   state='choose'; joy=null;
   const gift=pendingGift>0;
+  if(!gift) haptic('level');
   $('chooseEye').textContent = gift ? '선물 상자 개봉' : `레벨 업 · Lv ${P.level-pending+1}`;
   $('chooseTitle').textContent = gift ? '상자 안에서 뭐가 나왔을까?' : '무엇을 챙길까?';
   const pool=UPG.filter(u=>(S.lv[u.id]||0)<u.max);
@@ -47,7 +48,7 @@ function pick(u){
   if(pending>0||pendingGift>0) openChoice(); else { state='play'; show(null); }
 }
 function end(win){
-  state = win?'win':'over'; joy=null;
+  state = win?'win':'over'; joy=null; haptic(win?'win':'lose');
   const surv=Math.min(T,GAME_LEN);
   if(surv>best.time || (surv===best.time && kills>best.kills)){ best={time:Math.floor(surv),kills}; try{ localStorage.setItem('nyanta-best',JSON.stringify(best)); }catch(e){} }
   showBest();
@@ -58,3 +59,18 @@ function end(win){
   rankOnEnd(win);
   show('ovEnd'); $('againBtn').focus({preventScroll:true});
 }
+
+// 일시정지 화면의 진동 켜기/끄기 (진동 지원 기기에서만 보임)
+function paintVibe(){ $('vibeBtn').textContent = vibeOn ? '진동 켜짐' : '진동 꺼짐'; $('vibeBtn').setAttribute('aria-pressed', vibeOn); }
+if(CAN_VIBRATE){ $('vibeBtn').hidden = false; paintVibe(); }
+$('vibeBtn').onclick = ()=>{
+  vibeOn = !vibeOn; paintVibe();
+  try{ localStorage.setItem('nyanta-vibe', vibeOn?'on':'off'); }catch(e){}
+  if(vibeOn) haptic('level');
+};
+
+// 안내 문구의 시간을 설정값(GAME_LEN 등)에 맞춰 표시
+function durText(sec){ sec=Math.round(sec); return sec>=60 && sec%60===0 ? sec/60+'분' : sec>=60 ? Math.floor(sec/60)+'분 '+sec%60+'초' : sec+'초'; }
+document.querySelectorAll('[data-t]').forEach(el=>{
+  el.textContent = durText({ game:GAME_LEN, fever:FEVER_EVERY/PACE, feverLen:FEVER_LEN }[el.dataset.t]);
+});

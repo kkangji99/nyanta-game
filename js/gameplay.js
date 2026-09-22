@@ -12,13 +12,14 @@ function spawnEnemy(type,ang,dist){
       if(Math.hypot(x-P.x,y-P.y)>380) break;
     }
   }
-  const m = type==='boss' ? 1+T/200 : 1+T/70;
+  const tp=T*PACE, m = type==='boss' ? 1+tp/200 : 1+tp/70;
   E.push({type,x,y,hp:d.hp*m,max:d.hp*m,sp:d.sp*(.9+Math.random()*.2),r:d.r,dmg:d.dmg,xp:d.xp,kx:0,ky:0,flash:0,bcd:0,face:1,shotT:2.5,wob:Math.random()*6});
 }
 function pickType(){
   const r=Math.random();
-  if(T>80 && r<.12+Math.min(.13,T/2000)) return 'big';
-  if(T>25 && r<.45) return 'mouse';
+  const tp=T*PACE;
+  if(tp>80 && r<.12+Math.min(.13,tp/2000)) return 'big';
+  if(tp>25 && r<.45) return 'mouse';
   return 'snow';
 }
 function nearest(max){ let b=null, bd=max*max; for(const e of E){ const d=(e.x-P.x)**2+(e.y-P.y)**2; if(d<bd){bd=d;b=e;} } return b; }
@@ -41,7 +42,7 @@ function damage(e,d,vx,vy){
 }
 function hurt(d){
   if(fever>0) return;   // 집사 찬스 중에는 무적
-  P.hp-=d; P.inv=.6; shake=9; popText(P.x,P.y-30,'-'+d,'#d23a44');
+  P.hp-=d; P.inv=.6; shake=9; haptic('hurt'); popText(P.x,P.y-30,'-'+d,'#d23a44');
   burst(P.x,P.y,6,['#f0a050','#ffffff'],120);
   if(P.hp<=0){ P.hp=0; end(false); }
 }
@@ -79,21 +80,21 @@ function update(dt){
     if(hug>=HUG_LEN) hug=-1;
   }
   const testFever=FEVER_TEST && !flags.feverTest && T>=3;
-  if((Math.floor(T/FEVER_EVERY)>feverN || testFever) && T<GAME_LEN-3){
+  if((Math.floor(T*PACE/FEVER_EVERY)>feverN || testFever) && T<GAME_LEN-3){
     if(testFever) flags.feverTest=1; else feverN++;
     fever=FEVER_LEN; fireT=0;
     // [보류] 집사 팔이 화면을 액자처럼 끌어안는 애니메이션. 사용하려면 아래 줄과 render.js의 drawHugHand 호출 주석을 해제
     // hug=0;
     P.hp=Math.min(P.max,P.hp+20); popText(P.x,P.y-34,'+20','#2d6a4f');
     burst(P.x,P.y,30,['#f2c14e','#fff3c4','#ffffff'],260);
-    banner(`집사 찬스! ${FEVER_LEN}초간 무적 · 연사`);
+    banner(`집사 찬스! ${FEVER_LEN}초간 무적 · 연사`); haptic('fever');
   }
 
   // spawns & events
   spawnT-=dt;
-  if(spawnT<=0){ const n=1+Math.floor(T/75); for(let i=0;i<n&&E.length<MAX_E;i++) spawnEnemy(pickType()); spawnT=Math.max(.14,.95-T*.0028); }
-  for(const bt of [150,270]) if(T>=bt && !flags['b'+bt]){ flags['b'+bt]=1; spawnEnemy('boss'); banner('눈보라 대왕 등장!'); }
-  for(const st of [100,200,240]) if(T>=st && !flags['s'+st]){ flags['s'+st]=1; const n=Math.max(0,Math.min(24,MAX_E+20-E.length)); for(let i=0;i<n;i++) spawnEnemy('mouse',i/n*TAU,360); banner('선물 도둑 쥐떼가 포위했다!'); }
+  if(spawnT<=0){ const tp=T*PACE, n=1+Math.floor(tp/75); for(let i=0;i<n&&E.length<MAX_E;i++) spawnEnemy(pickType()); spawnT=Math.max(.14,.95-tp*.0028); }
+  for(const bt of [150,270]) if(T*PACE>=bt && !flags['b'+bt]){ flags['b'+bt]=1; spawnEnemy('boss'); banner('눈보라 대왕 등장!'); haptic('boss'); }
+  for(const st of [100,200,240]) if(T*PACE>=st && !flags['s'+st]){ flags['s'+st]=1; const n=Math.max(0,Math.min(24,MAX_E+20-E.length)); for(let i=0;i<n;i++) spawnEnemy('mouse',i/n*TAU,360); banner('선물 도둑 쥐떼가 포위했다!'); haptic('swarm'); }
 
   // weapons
   fireT-=dt;
@@ -161,7 +162,7 @@ function update(dt){
     if(l<60){ it.x+=dx/l*220*dt; it.y+=dy/l*220*dt; }
     if(l<P.r+12){ it.dead=true;
       if(it.kind==='churu'){ const h=Math.min(30,P.max-P.hp); P.hp+=h; popText(P.x,P.y-34,'+'+Math.round(h),'#2d6a4f'); burst(P.x,P.y,8,['#f39a3d','#fff6ea'],110); }
-      else { pendingGift++; burst(it.x,it.y,14,['#d23a44','#f2c14e','#ffffff'],170); } } }
+      else { pendingGift++; haptic('gift'); burst(it.x,it.y,14,['#d23a44','#f2c14e','#ffffff'],170); } } }
 
   sweep(shots,s=>s.life>0); sweep(canes,c=>!c.dead); sweep(E,e=>!e.dead);
   sweep(gems,g=>!g.dead); sweep(items,i=>!i.dead); sweep(foes,f=>f.life>0);

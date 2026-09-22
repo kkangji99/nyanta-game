@@ -108,3 +108,57 @@ h2.display{margin:0;font-size:32px;line-height:1.15;text-wrap:balance}
 .board .top3 .rk-no{color:#e0a068}
 .board li.me{background:var(--card2);outline:1.5px solid var(--gold)}
 .board .rk-empty{display:block;text-align:center;color:var(--muted)}
+
+/* 화면 위 알림 레이어 */
+#toast{position:absolute;left:50%;top:calc(20px + env(safe-area-inset-top, 0px));z-index:50;max-width:calc(100% - 32px);width:max-content;
+  background:rgba(15,24,48,.95);color:var(--ink);border:1.5px solid var(--gold);border-radius:14px;padding:12px 18px;
+  font-family:"Jua","Gowun Dodum",sans-serif;font-size:17px;line-height:1.4;text-align:center;text-wrap:balance;word-break:keep-all;
+  box-shadow:0 10px 30px rgba(0,0,0,.4);pointer-events:none;
+  opacity:0;transform:translate(-50%,-18px) scale(.94);transition:opacity .25s ease,transform .35s cubic-bezier(.2,1.4,.4,1)}
+#toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+#toast:empty{display:none}
+@media (prefers-reduced-motion:reduce){ #toast{transition:opacity .2s} }
+
+/* 반응형: 오버레이 칸이 내용 길이만큼 늘어나 화면 밖으로 넘치지 않도록 화면 너비에 고정 */
+.ov{grid-template-columns:minmax(0,1fr)}
+.panel{justify-self:center}
+@media (max-width:480px){
+  .ov{padding:12px}
+  .panel{gap:12px;padding:18px 14px 14px;border-radius:18px}
+  .title small{font-size:17px}
+  .lead{font-size:14px;line-height:1.55}
+  .legend{gap:6px}
+  .legend div{padding:8px 4px}
+  .legend strong{font-size:15px}
+  .legend span{font-size:11px}
+  .controls{font-size:12px}
+  .btn{font-size:20px;padding:12px 16px}
+  .btn-sub{font-size:16px;padding:9px 14px}
+  h2.display{font-size:26px}
+  .result dd{font-size:21px}
+  .card{padding:10px 12px}
+  .card .nm{font-size:17px}
+  .board li{grid-template-columns:1.6em 1fr auto 4em;gap:8px;padding:6px 10px;font-size:13px}
+  #toast{font-size:15px;padding:10px 14px}
+}
+/* 세로가 짧은 화면(가로 모드 휴대폰 등) */
+@media (max-height:640px){
+  .panel{gap:10px;padding-block:16px 14px}
+  .title span{font-size:clamp(38px,9vh,60px)}
+  .legend canvas,.card canvas{width:36px;height:36px}
+}
+/* 격자 안 요소가 내용의 최소 너비 때문에 패널을 밀어내지 않도록 */
+.panel{min-width:0;max-width:100%;box-sizing:border-box}
+.panel>*{min-width:0}
+.legend{grid-template-columns:repeat(3,minmax(0,1fr))}
+.result{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* 터치 기기에서는 키보드 안내 대신 터치 안내 */
+.touch-only{display:none}
+@media (hover:none) and (pointer:coarse){ .kb-only{display:none} .touch-only{display:inline} }
+/* 좁은 화면 HUD: 글자가 두 줄로 꺾이지 않게 */
+.clock small,.stats span{white-space:nowrap}
+@media (max-width:420px){
+  .row{padding:8px 10px;gap:6px}
+  .clock .lg{display:none}
+  .chip{padding:5px 8px;gap:6px}
+}
