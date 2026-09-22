@@ -162,3 +162,8 @@ h2.display{margin:0;font-size:32px;line-height:1.15;text-wrap:balance}
   .clock .lg{display:none}
   .chip{padding:5px 8px;gap:6px}
 }
+/* 눈사람의 분노 중 HUD 시계가 차갑게 깜빡임 */
+#hud.wrath .clock{box-shadow:0 0 0 1.5px #8fd0ff,0 0 16px rgba(143,208,255,.45)}
+#hud.wrath .clock b{color:#bfe3ff;animation:wrathPulse .8s ease-in-out infinite}
+@keyframes wrathPulse{50%{color:#ffffff;text-shadow:0 0 10px #8fd0ff}}
+@media (prefers-reduced-motion:reduce){ #hud.wrath .clock b{animation:none} }

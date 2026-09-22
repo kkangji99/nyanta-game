@@ -58,6 +58,7 @@ function render(rt){
   ctx.setTransform(DPR,0,0,DPR,0,0);
   let sx=0, sy=0;
   if(shake>0){ if(!RM){ sx=(Math.random()-.5)*shake; sy=(Math.random()-.5)*shake; } shake=Math.max(0,shake-rdt*40); }
+  if(flags.wrath && state==='play' && !RM){ sx+=(Math.random()-.5)*3.2; sy+=(Math.random()-.5)*3.2; }   // 분노 중 땅이 계속 떨림
   ctx.fillStyle='#e4ecf4'; ctx.fillRect(0,0,W,H);
   const mg=70;
   camX = W/2-mg>=AW ? 0 : clamp(P.x,-AW-mg+W/2,AW+mg-W/2);
@@ -68,6 +69,7 @@ function render(rt){
   drawGround(rt);
   drawFence();
   drawTrees(rt,true);
+  for(const b of bolts) if(b.t>=0 && b.t<BOLT_WARN) drawBoltWarn(b,rt);   // 바닥의 경고 원
   const fishN=sprite('fish',32,18,17,9,3,g=>drawFish(g,0,0,1,0,false)), fishG=sprite('fishG',32,18,17,9,3,g=>drawFish(g,0,0,1,0,true));
   const gx0=camX-W/2-20, gx1=camX+W/2+20, gy0=camY-H/2-20, gy1=camY+H/2+20;
   for(const g of gems){ if(g.x<gx0||g.x>gx1||g.y<gy0||g.y>gy1) continue;
@@ -103,6 +105,7 @@ function render(rt){
     : sprite('ball',16,16,8,8,2,g=>drawSnowball(g,0,0,6));
   for(const s of shots) blit(ball,s.x,s.y,1);
   for(const f of foes) drawShard(ctx,f.x,f.y,f.r,Math.atan2(f.vy,f.vx));
+  for(const b of bolts) if(b.t>=BOLT_WARN) drawBoltStrike(b);          // 하늘에서 내리꽂히는 눈벼락
   for(const p of parts){ p.x+=p.vx*rdt; p.y+=p.vy*rdt; p.vx*=.93; p.vy*=.93; p.life-=rdt; ctx.globalAlpha=Math.max(0,Math.min(1,p.life*2)); ctx.fillStyle=p.col; circ(ctx,p.x,p.y,p.r); }
   ctx.globalAlpha=1; sweep(parts,p=>p.life>0);
   ctx.font='14px Jua, "Malgun Gothic", sans-serif'; ctx.textAlign='center';
@@ -121,6 +124,8 @@ function render(rt){
     vgKey=key;
   }
   ctx.fillStyle=vgGrad; ctx.fillRect(0,0,W,H);
+  if(flags.wrath){ ctx.fillStyle='rgba(18,28,70,.2)'; ctx.fillRect(0,0,W,H); }   // 분노 중 먹구름 낀 하늘
+  if(flash>0){ ctx.fillStyle=`rgba(225,238,255,${Math.min(.45,flash*1.4)})`; ctx.fillRect(0,0,W,H); flash=Math.max(0,flash-rdt*1.6); }
   if(fever>0){   // 집사 찬스 중 화면 가장자리를 따뜻한 금빛으로
     const a=Math.min(1,fever)*(.28+Math.sin(rt*6)*.06);
     ctx.strokeStyle=`rgba(242,193,78,${a+hq*.25})`; ctx.lineWidth=18+hq*14; ctx.strokeRect(0,0,W,H);
@@ -130,7 +135,8 @@ function render(rt){
 
   // snowfall (한 경로로 모아 한 번에 fill)
   ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath();
-  for(const f of flakes){ if(!RM){ f.y+=f.s*rdt/H; f.x+=Math.sin(rt+f.ph)*8*rdt/W; }
+  const storm=flags.wrath?1:0;   // 분노 중에는 눈보라가 빠르고 비스듬히
+  for(const f of flakes){ if(!RM){ f.y+=f.s*(1+storm*1.8)*rdt/H; f.x+=(Math.sin(rt+f.ph)*8+storm*f.s*.9)*rdt/W; }
     if(f.y>1.02){ f.y=-.02; f.x=Math.random(); } if(f.x<0) f.x+=1; if(f.x>1) f.x-=1;
     const x=f.x*W, y=f.y*H; ctx.moveTo(x+f.r,y); ctx.arc(x,y,f.r,0,TAU); }
   ctx.fill();
@@ -144,6 +150,7 @@ function render(rt){
     setHud('hpFill','w',(P.hp/P.max*100).toFixed(1)+'%'); setHud('hpTxt','t',Math.ceil(P.hp));
     setHud('xpFill','w',Math.min(100,P.xp/P.next*100).toFixed(1)+'%');
     setHud('clock','t',fmt(GAME_LEN-T).padStart(5,'0')); setHud('lv','t',P.level); setHud('kills','t',kills);
+    setHud('wrath','c',!!flags.wrath && state==='play');
     setHud('fever','h',fever<=0||state==='over'||state==='win'); setHud('feverSec','t',Math.ceil(fever));
     setHud('feverFill','w',(fever/FEVER_LEN*100).toFixed(1)+'%');
   }
@@ -200,5 +207,37 @@ const hudEl={}, hudVal={};
 ['hud','hpFill','hpTxt','xpFill','clock','lv','kills','fever','feverSec','feverFill'].forEach(id=>hudEl[id]=$(id));
 function setHud(id,kind,v){
   if(hudVal[id]===v) return; hudVal[id]=v;
-  if(kind==='w') hudEl[id].style.width=v; else if(kind==='h') hudEl[id].hidden=v; else hudEl[id].textContent=v;
+  if(kind==='w') hudEl[id].style.width=v; else if(kind==='h') hudEl[id].hidden=v; else if(kind==='c') hudEl.hud.classList.toggle(id,v); else hudEl[id].textContent=v;
+}
+
+// 눈벼락 경고 원: 바깥 고리가 BOLT_WARN초 동안 좁혀지고, 떨어지기 직전엔 빨갛게 깜빡임
+function drawBoltWarn(b,rt){
+  const k=b.t/BOLT_WARN, late=k>.7;
+  ctx.fillStyle=late&&Math.floor(rt*14)%2 ? 'rgba(225,70,80,.28)' : `rgba(90,140,230,${.1+k*.18})`;
+  ctx.beginPath(); ctx.ellipse(b.x,b.y,BOLT_R,BOLT_R*.55,0,0,TAU); ctx.fill();
+  ctx.strokeStyle=late?'rgba(225,70,80,.85)':'rgba(70,120,220,.7)'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.ellipse(b.x,b.y,BOLT_R,BOLT_R*.55,0,0,TAU); ctx.stroke();
+  const rr=BOLT_R*(1.7-.7*k);
+  ctx.strokeStyle=`rgba(255,255,255,${.4+k*.5})`; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(b.x,b.y,rr,rr*.55,0,0,TAU); ctx.stroke();
+}
+// 눈벼락: 화면 위에서 착지점까지 지그재그 번개 + 착지 충격파. 매 프레임 모양이 살짝 바뀌어 번쩍이는 느낌
+function drawBoltStrike(b){
+  const u=(b.t-BOLT_WARN)/.5, a=1-u; if(a<=0) return;
+  const top=camY-H/2-40, segs=9;
+  const pts=[[b.x+(Math.random()-.5)*40,top]];
+  for(let i=1;i<segs;i++){ const y=top+(b.y-top)*i/segs; pts.push([b.x+(Math.random()-.5)*46*(1-i/segs),y]); }
+  pts.push([b.x,b.y]);
+  const trace=()=>{ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(const p of pts) ctx.lineTo(p[0],p[1]); };
+  ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.globalAlpha=a; ctx.shadowColor='#8fd0ff'; ctx.shadowBlur=24;
+  ctx.strokeStyle='#8fd0ff'; ctx.lineWidth=14*a+4; trace(); ctx.stroke();
+  ctx.shadowBlur=0; ctx.strokeStyle='#ffffff'; ctx.lineWidth=5*a+2; trace(); ctx.stroke();
+  // 착지 충격파
+  const ring=BOLT_R*(.6+u*1.2);
+  ctx.globalAlpha=a*.9; ctx.strokeStyle='#ffffff'; ctx.lineWidth=5*a+1;
+  ctx.beginPath(); ctx.ellipse(b.x,b.y,ring,ring*.55,0,0,TAU); ctx.stroke();
+  ctx.fillStyle='rgba(220,240,255,.8)'; ctx.globalAlpha=a*.7;
+  ctx.beginPath(); ctx.ellipse(b.x,b.y,BOLT_R*.7*(1-u*.5),BOLT_R*.38*(1-u*.5),0,0,TAU); ctx.fill();
+  ctx.restore();
 }

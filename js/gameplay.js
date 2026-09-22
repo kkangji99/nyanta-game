@@ -96,6 +96,34 @@ function update(dt){
   for(const bt of [150,270]) if(T*PACE>=bt && !flags['b'+bt]){ flags['b'+bt]=1; spawnEnemy('boss'); banner('눈보라 대왕 등장!'); haptic('boss'); }
   for(const st of [100,200,240]) if(T*PACE>=st && !flags['s'+st]){ flags['s'+st]=1; const n=Math.max(0,Math.min(24,MAX_E+20-E.length)); for(let i=0;i<n;i++) spawnEnemy('mouse',i/n*TAU,360); banner('선물 도둑 쥐떼가 포위했다!'); haptic('swarm'); }
 
+  // 눈사람의 분노: 마지막 30초(5분 기준) 동안 경고 원 → 눈벼락 낙뢰
+  if(!flags.wrath && (T*PACE>=WRATH_AT || (WRATH_TEST && T>=3))){
+    flags.wrath=1; boltT=1.2; shake=Math.max(shake,16);
+    banner('눈사람의 분노! 눈벼락을 피하라'); haptic('wrath');
+  }
+  if(flags.wrath){
+    boltT-=dt;
+    if(boltT<=0){
+      const prog=clamp((T*PACE-WRATH_AT)/(300-WRATH_AT),0,1);   // 분노가 진행될수록 더 자주, 더 많이
+      const place=(x,y,delay)=>bolts.push({x:clamp(x,-AW+20,AW-20),y:clamp(y,-AH+20,AH-20),t:-delay,hit:false,seed:Math.random()*1000});
+      place(P.x+P.vx*.45, P.y+P.vy*.45, 0);   // 이동 방향을 예측해서 한 발
+      const extra=1+(Math.random()<.35+prog*.4?1:0);
+      for(let k=0;k<extra;k++) place(P.x+(Math.random()-.5)*560, P.y+(Math.random()-.5)*380, Math.random()*.5);
+      boltT=1.6-prog*.6;
+    }
+  }
+  for(const b of bolts){
+    b.t+=dt;
+    if(!b.hit && b.t>=BOLT_WARN){
+      b.hit=true;
+      shake=Math.max(shake,18); flash=Math.max(flash,.35); haptic('bolt');
+      burst(b.x,b.y,26,['#ffffff','#bfe3ff','#8fd0ff'],320);
+      if(Math.hypot(P.x-b.x,P.y-b.y)<BOLT_R+P.r*.4){ hurt(BOLT_DMG); if(state!=='play') return; }
+      for(const e of E){ const dx=e.x-b.x, dy=e.y-b.y; if(dx*dx+dy*dy<(BOLT_R+e.r)**2) damage(e,BOLT_ENEMY_DMG,dx,dy); }
+    }
+  }
+  sweep(bolts,b=>b.t<BOLT_WARN+.5);
+
   // weapons
   fireT-=dt;
   if(fireT<=0){

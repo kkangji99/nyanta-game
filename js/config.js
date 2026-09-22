@@ -9,7 +9,15 @@ const FEVER_LEN = 10;        // 집사 찬스 지속 시간(초)
 // 온라인 랭킹 (Supabase). publishable 키는 브라우저 공개용 키라 코드에 넣어도 됨
 const SUPABASE_URL = 'https://nhllcpfadwckrqkryjyy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_VrWL907agR9n7snNydLz4Q_oRzVyky-';
-const HUG_LEN = 1.6;        // 집사 손이 안아주는 애니메이션 길이(초)
+// 눈사람의 분노: 5분 기준 WRATH_AT초(=마지막 30초)부터 눈벼락이 떨어짐 (PACE로 압축)
+const WRATH_AT = 270;
+const BOLT_WARN = 1.0;       // 경고 원이 보이는 시간(초) — 이 사이에 피해야 함
+const BOLT_R = 58;           // 눈벼락 피해 반경
+const BOLT_DMG = 24;         // 냥타가 받는 피해
+const BOLT_ENEMY_DMG = 60;   // 적이 받는 피해
+// 주소 뒤에 ?wrath 를 붙이면 3초에 분노 단계 시작 (확인용)
+const WRATH_TEST = /[?&]wrath\b/.test(location.search);
+const HUG_LEN = 1.6;       // 집사 손이 안아주는 애니메이션 길이(초)
 // 주소 뒤에 ?fever 를 붙이면 첫 집사 찬스가 3초에 발동 (애니메이션 확인용)
 const FEVER_TEST = /[?&]fever\b/.test(location.search);
 

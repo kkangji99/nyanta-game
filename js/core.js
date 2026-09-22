@@ -42,6 +42,8 @@ const VIBE = {
   swarm:  [50,30,50,30,50],            // 쥐떼 포위
   lose:   [250],                       // 쓰러짐
   win:    [80,60,80,60,220],           // 배달 성공
+  wrath:  [220,80,220],                // 눈사람의 분노 시작
+  bolt:   [90,40,150],                 // 눈벼락 낙뢰
 };
 function haptic(kind){
   if(!CAN_VIBRATE || !vibeOn) return;
