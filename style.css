@@ -73,7 +73,6 @@ h2.display{margin:0;font-size:32px;line-height:1.15;text-wrap:balance}
 .result dd{margin:2px 0 0;font-family:"Jua",sans-serif;font-size:24px;font-variant-numeric:tabular-nums}
 @media (max-width:420px){
   .panel{padding:20px 16px 16px}
-  .stats .k{display:none}
   .clock small{font-size:10px}
 }
 @media (prefers-reduced-motion:reduce){ .btn,.card,#banner{transition:none} }
@@ -181,4 +180,11 @@ h2.display{margin:0;font-size:32px;line-height:1.15;text-wrap:balance}
   .stats{font-size:12px;gap:7px}
   .stats b{font-size:14px}
   #pauseBtn{width:24px;height:24px;border-radius:7px}
+}
+/* Lv·처치: 넓은 화면은 한 줄, 좁은 화면은 두 줄로 쌓아 둘 다 보이게 */
+.statnums{display:flex;align-items:center;gap:10px}
+@media (max-width:430px){
+  .statnums{flex-direction:column;align-items:flex-end;gap:0;font-size:11px;line-height:1.25}
+  .stats b{font-size:13px}
+  .hp .bar{width:clamp(44px,12vw,100px)}
 }
