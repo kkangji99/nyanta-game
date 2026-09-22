@@ -74,3 +74,11 @@ function durText(sec){ sec=Math.round(sec); return sec>=60 && sec%60===0 ? sec/6
 document.querySelectorAll('[data-t]').forEach(el=>{
   el.textContent = durText({ game:GAME_LEN, fever:FEVER_EVERY/PACE, feverLen:FEVER_LEN }[el.dataset.t]);
 });
+
+// 타이틀 화면으로 돌아가기 (일시정지·결과 화면에서)
+function goTitle(){
+  reset(); state='title'; joy=null;
+  $('hud').hidden=true; hudVal.wrath=undefined; hudEl.hud.classList.remove('wrath');
+  showBest(); show('ovTitle'); $('startBtn').focus({preventScroll:true});
+}
+$('homeBtn').onclick=goTitle; $('homeBtn2').onclick=goTitle;
