@@ -5,15 +5,19 @@ function spawnEnemy(type,ang,dist){
   let x=0, y=0;
   if(ang!==undefined){ x=clamp(P.x+Math.cos(ang)*dist,-AW+d.r,AW-d.r); y=clamp(P.y+Math.sin(ang)*dist,-AH+d.r,AH-d.r); }
   else {
-    for(let k=0;k<8;k++){ // 울타리 가장자리에서, 냥타와 떨어진 곳에 등장
-      const side=Math.floor(Math.random()*4), u=Math.random()*2-1;
-      if(side<2){ x=u*(AW-d.r); y=side===0?-AH+d.r:AH-d.r; }
-      else { x=side===2?-AW+d.r:AW-d.r; y=u*(AH-d.r); }
-      if(Math.hypot(x-P.x,y-P.y)>380) break;
+    // 냥타 둘레, 화면 바로 밖의 원 위 아무 방향에서 등장 (울타리 밖이면 안쪽으로 당김).
+    // 울타리 근처라 너무 가까워지면 다른 방향을 다시 고름
+    const R=Math.hypot(W,H)/2+40, minD=Math.min(R,420)*.8;
+    for(let k=0;k<10;k++){
+      const a=Math.random()*TAU;
+      x=clamp(P.x+Math.cos(a)*R,-AW+d.r,AW-d.r); y=clamp(P.y+Math.sin(a)*R,-AH+d.r,AH-d.r);
+      if(Math.hypot(x-P.x,y-P.y)>minD) break;
     }
   }
   const tp=T*PACE, m = type==='boss' ? 1+tp/200 : 1+tp/70;
-  E.push({type,x,y,hp:d.hp*m,max:d.hp*m,sp:d.sp*(.9+Math.random()*.2),r:d.r,dmg:d.dmg,xp:d.xp,kx:0,ky:0,flash:0,bcd:0,face:1,shotT:2.5,wob:Math.random()*6});
+  E.push({type,x,y,hp:d.hp*m,max:d.hp*m,sp:d.sp*(.85+Math.random()*.3),r:d.r,dmg:d.dmg,xp:d.xp,kx:0,ky:0,flash:0,bcd:0,face:1,shotT:2.5,wob:Math.random()*6,
+    // 적마다 냥타 주변의 서로 다른 지점을 노림(fa: 방향, fr: 거리, fs: 도는 속도) → 한 줄로 뭉치지 않고 여러 방향에서 에워쌈
+    fa:Math.random()*TAU,fr:80+Math.random()*120,fs:(Math.random()-.5)*.8});
 }
 function pickType(){
   const r=Math.random();
@@ -41,8 +45,10 @@ function damage(e,d,vx,vy){
   }
 }
 function hurt(d){
-  if(fever>0) return;   // 집사 찬스 중에는 무적
-  P.hp-=d; P.inv=.6; shake=9; haptic('hurt'); popText(P.x,P.y-30,'-'+d,'#d23a44');
+  if(fever>0 || P.inv>0) return;   // 집사 찬스 중이거나 피격 직후 무적 시간이면 무시
+  P.hp-=d; P.inv=HURT_INV; shake=9;
+  // 맞는 순간 주변 적을 살짝 밀쳐내서 숨 돌릴 틈을 줌
+  for(const e of E){ if(e.type==='boss') continue; const dx=e.x-P.x, dy=e.y-P.y, l=Math.hypot(dx,dy)||1; if(l<90){ e.kx+=dx/l*260; e.ky+=dy/l*260; } } haptic('hurt'); popText(P.x,P.y-30,'-'+d,'#d23a44');
   burst(P.x,P.y,6,['#f0a050','#ffffff'],120);
   if(P.hp<=0){ P.hp=0; end(false); }
 }
@@ -153,7 +159,10 @@ function update(dt){
   const damp=Math.max(0,1-9*dt);
   for(const e of E){
     const dx=P.x-e.x, dy=P.y-e.y, l=Math.hypot(dx,dy)||1;
-    e.x+=(dx/l*e.sp+e.kx)*dt; e.y+=(dy/l*e.sp+e.ky)*dt; e.kx*=damp; e.ky*=damp;
+    // 멀리 있을 땐 냥타 주변의 자기 목표 지점으로, 가까워질수록 냥타 본체로 (보스는 곧장)
+    const off = e.type==='boss' ? 0 : Math.min(1,Math.max(0,(l-60)/260))*e.fr, ta=e.fa+T*e.fs;
+    const gx=P.x+Math.cos(ta)*off-e.x, gy=P.y+Math.sin(ta)*off-e.y, gl=Math.hypot(gx,gy)||1;
+    e.x+=(gx/gl*e.sp+e.kx)*dt; e.y+=(gy/gl*e.sp+e.ky)*dt; e.kx*=damp; e.ky*=damp;
     e.face=dx>0?1:-1; e.wob+=dt*(e.type==='mouse'?9:4);
     if(e.flash>0) e.flash-=dt; if(e.bcd>0) e.bcd-=dt;
     e.x=clamp(e.x,-AW+e.r,AW-e.r); e.y=clamp(e.y,-AH+e.r,AH-e.r);
@@ -164,7 +173,7 @@ function update(dt){
   if(state!=='play') return;
   // separation
   for(let i=0;i<E.length;i++){ const a=E[i];
-    for(let j=i+1;j<E.length;j++){ const b=E[j], dx=b.x-a.x, dy=b.y-a.y, rr=a.r+b.r;
+    for(let j=i+1;j<E.length;j++){ const b=E[j], dx=b.x-a.x, dy=b.y-a.y, rr=(a.r+b.r)*1.3;   // 적끼리 여유 간격을 둬서 덩어리로 뭉치지 않게
       if(dx>rr||dx<-rr||dy>rr||dy<-rr) continue;
       const d=Math.hypot(dx,dy)||.01; if(d<rr){ const p=(rr-d)/2/d, wa=a.type==='boss'?.1:1, wb=b.type==='boss'?.1:1; a.x-=dx*p*wa; a.y-=dy*p*wa; b.x+=dx*p*wb; b.y+=dy*p*wb; } } }
 

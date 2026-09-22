@@ -4,6 +4,7 @@ const GAME_LEN = 60;         // 버텨야 하는 시간(초). 정식 300, 테스
 const PACE = 300 / GAME_LEN;
 const AW = 820, AH = 820;   // 울타리 안쪽 반폭/반높이
 const MAX_E = 80;           // 동시에 나오는 적 최대 수
+const HURT_INV = 1.0;        // 피격 후 무적 시간(초). 적이 몰려오는 장르 특성상 0.5~1초가 일반적
 const FEVER_EVERY = 120;     // 집사 찬스 주기(초)
 const FEVER_LEN = 10;        // 집사 찬스 지속 시간(초)
 // 온라인 랭킹 (Supabase). publishable 키는 브라우저 공개용 키라 코드에 넣어도 됨
