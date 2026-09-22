@@ -26,6 +26,19 @@ function pickType(){
   if(tp>25 && r<.45) return 'mouse';
   return 'snow';
 }
+// 나무 밑동은 통과할 수 없음. 겹치면 밖으로 밀어냄 (밑동은 납작한 타원이라 세로를 눌러서 계산)
+function pushOutOfTrees(o){
+  const ix=Math.floor(o.x/CELL), iy=Math.floor(o.y/CELL);
+  for(let j=-1;j<=1;j++) for(let i=-1;i<=1;i++){
+    const t=treeAt(ix+i,iy+j); if(!t) continue;
+    const rr=11*t.sc+o.r*.55, dx=o.x-t.x, dy=(o.y-t.y)*1.7;
+    const d=Math.hypot(dx,dy);
+    if(d<rr){
+      if(d<.01){ o.x+=rr; continue; }
+      const p=(rr-d)/d; o.x+=dx*p; o.y+=dy*p/1.7;
+    }
+  }
+}
 function nearest(max){ let b=null, bd=max*max; for(const e of E){ const d=(e.x-P.x)**2+(e.y-P.y)**2; if(d<bd){bd=d;b=e;} } return b; }
 function burst(x,y,n,cols,sp){ if(parts.length>500) return; for(let i=0;i<n;i++){ const a=Math.random()*TAU, v=(.3+Math.random())*sp; parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.5+Math.random()*.4,r:1.5+Math.random()*2.5,col:cols[i%cols.length]}); } }
 function popText(x,y,txt,col){ if(texts.length>80) texts.shift(); texts.push({x,y,txt,col,life:.7}); }
@@ -70,7 +83,9 @@ function update(dt){
   P.vx+=(tx-P.vx)*acc; P.vy+=(ty-P.vy)*acc;
   const nx=clamp(P.x+P.vx*dt,-AW+P.r,AW-P.r), ny=clamp(P.y+P.vy*dt,-AH+P.r,AH-P.r);
   if(nx!==P.x+P.vx*dt) P.vx=0; if(ny!==P.y+P.vy*dt) P.vy=0;   // 울타리에 닿으면 그 방향 속도 제거
-  P.x=nx; P.y=ny; P.moving=Math.hypot(P.vx,P.vy)>20;
+  P.x=nx; P.y=ny;
+  { const px=P.x, py=P.y; pushOutOfTrees(P); if(P.x!==px) P.vx*=.2; if(P.y!==py) P.vy*=.2; }   // 나무에 막히면 그 방향 속도를 죽임
+  P.moving=Math.hypot(P.vx,P.vy)>20;
   if(Math.abs(mx)>.1) P.face=mx>0?1:-1;
   if(P.inv>0) P.inv-=dt;
   if(S.regen) P.hp=Math.min(P.max,P.hp+S.regen*dt);
@@ -166,6 +181,7 @@ function update(dt){
     e.face=dx>0?1:-1; e.wob+=dt*(e.type==='mouse'?9:4);
     if(e.flash>0) e.flash-=dt; if(e.bcd>0) e.bcd-=dt;
     e.x=clamp(e.x,-AW+e.r,AW-e.r); e.y=clamp(e.y,-AH+e.r,AH-e.r);
+    if(e.type!=='boss') pushOutOfTrees(e);   // 보스는 나무를 밀고 지나감
     if(l<e.r+P.r-4 && P.inv<=0 && state==='play') hurt(e.dmg);
     if(e.type==='boss'){ e.shotT-=dt; if(e.shotT<=0){ e.shotT=2.3; const a0=Math.random()*TAU;
       for(let k=0;k<12;k++){ const a=a0+k*TAU/12; foes.push({x:e.x,y:e.y,vx:Math.cos(a)*165,vy:Math.sin(a)*165,life:4,r:7}); } } }

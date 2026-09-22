@@ -2,6 +2,14 @@
 /* ---------- rendering ---------- */
 function hash(x,y){ let n=Math.imul(x,374761393)+Math.imul(y,668265263)|0; n=Math.imul(n^(n>>>13),1274126177); return ((n^(n>>>16))>>>0)/4294967296; }
 const CELL=170;
+// 울타리 안에 서 있는 나무 하나(장애물). 칸 좌표를 주면 위치와 크기를, 없으면 null
+function treeAt(ix,iy){
+  const h=hash(ix,iy); if(h>=.12) return null;
+  const h2=hash(ix+99,iy-7), h3=hash(ix-31,iy+53);
+  const x=ix*CELL+h2*CELL, y=iy*CELL+h3*CELL;
+  if(Math.abs(x)>AW-60||Math.abs(y)>AH-70) return null;
+  return {x,y,sc:.9+h2*.6};
+}
 function drawGround(rt){
   const x0=Math.floor((camX-W/2)/CELL)-1, x1=Math.floor((camX+W/2)/CELL)+1;
   const y0=Math.floor((camY-H/2)/CELL)-1, y1=Math.floor((camY+H/2)/CELL)+2;
@@ -43,9 +51,10 @@ function drawTrees(rt,before){
     const h=hash(ix,iy), h2=hash(ix+99,iy-7), h3=hash(ix-31,iy+53);
     const x=ix*CELL+h2*CELL, y=iy*CELL+h3*CELL;
     const inside=Math.abs(x)<AW+30&&Math.abs(y)<AH+70;
-    if(inside ? (h>=.12||Math.abs(x)>AW-60||Math.abs(y)>AH-70) : h>=.7) continue;
+    const t=inside?treeAt(ix,iy):(h<.7?{sc:.9+h2*.6}:null);
+    if(!t) continue;
     if((y<P.y)!==before) continue;
-    const sc=.9+h2*.6;
+    const sc=t.sc;
     blit(sprite('tree',52,68,26,58,3,g=>drawTree(g,0,0,1,false,0)),x,y,sc);
     if(h<.05) drawTreeLights(ctx,x,y,sc,rt);
   }

@@ -46,12 +46,21 @@ function drawCat(g,x,y,f,t,moving){
   g.fillStyle='#e0707c'; circ(g,8,-5.5,1.4);
   g.strokeStyle='rgba(29,36,51,.55)'; g.lineWidth=.8;
   g.beginPath(); g.moveTo(12,-5); g.lineTo(18,-6.5); g.moveTo(12,-4); g.lineTo(18,-3.5); g.stroke();
-  // santa hat
-  g.fillStyle='#d23a44';
-  g.beginPath(); g.moveTo(-6,-15); g.quadraticCurveTo(2,-30,-12,-30); g.quadraticCurveTo(-4,-24,-6,-15); g.fill();
-  g.beginPath(); g.moveTo(-6,-15); g.quadraticCurveTo(0,-31,12,-17); g.closePath(); g.fill();
-  g.fillStyle='#fff'; g.beginPath(); g.roundRect(-7,-18,20,5,2.5); g.fill();
-  circ(g,-12,-29,3.2);
+  // 산타 모자: 머리(중심 4,-8 반지름 11) 위에 얹히고, 끝이 뒤쪽(왼쪽)으로 늘어짐
+  g.fillStyle='#c9303c';
+  g.beginPath();
+  g.moveTo(-6,-16);                       // 머리 왼쪽 테두리
+  g.bezierCurveTo(-4,-27,3,-32,7,-31);    // 고깔이 위로 솟았다가
+  g.bezierCurveTo(-1,-28,-6,-26,-11,-27); // 뒤로 꺾여 늘어짐
+  g.bezierCurveTo(-9,-23,-7,-20,-6,-16);
+  g.closePath(); g.fill();
+  g.fillStyle='#d23a44';                  // 앞쪽 면(밝은 빨강)
+  g.beginPath(); g.moveTo(-6,-16); g.bezierCurveTo(-2,-28,4,-31,7,-31); g.bezierCurveTo(9,-26,12,-20,14,-17); g.closePath(); g.fill();
+  g.fillStyle='#fff6ea';                  // 흰 테두리
+  g.beginPath(); g.roundRect(-8,-19,23,6,3); g.fill();
+  g.fillStyle='#e8dfd0'; g.beginPath(); g.roundRect(-8,-14.5,23,1.5,.7); g.fill();
+  g.fillStyle='#fff6ea'; circ(g,-12,-27,4);   // 방울
+  g.fillStyle='#e8dfd0'; circ(g,-13.5,-25.5,1.6);
   // scarf
   g.fillStyle='#2d6a4f'; g.beginPath(); g.roundRect(-3,-1,14,4,2); g.fill(); g.fillRect(-2,1,4,7);
   g.restore();
