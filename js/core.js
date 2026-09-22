@@ -45,8 +45,11 @@ const VIBE = {
   wrath:  [220,80,220],                // 눈사람의 분노 시작
   bolt:   [90,40,150],                 // 눈벼락 낙뢰
 };
+// 브라우저는 사용자가 화면을 한 번 조작하기 전의 진동 호출을 막고 콘솔 오류를 남긴다
+let userActed=false;
+for(const ev of ['pointerdown','keydown','click']) addEventListener(ev,()=>{userActed=true;},{once:true});
 function haptic(kind){
-  if(!CAN_VIBRATE || !vibeOn) return;
+  if(!CAN_VIBRATE || !vibeOn || !userActed) return;
   const now = performance.now();
   if(kind==='hurt' && now-lastVibe<180) return;   // 연속으로 맞을 때 진동이 끊이지 않도록
   lastVibe = now;

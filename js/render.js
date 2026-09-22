@@ -62,6 +62,7 @@ function drawTrees(rt,before){
 
 const flakes=Array.from({length:110},()=>({x:Math.random(),y:Math.random(),r:.8+Math.random()*2.4,s:20+Math.random()*50,ph:Math.random()*6}));
 let lastRT=0;
+const partGroups=new Map();   // 입자를 색·투명도별로 묶는 그릇 (매 프레임 재사용)
 function render(rt){
   const rdt=Math.min(.05,rt-lastRT); lastRT=rt;
   ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -115,10 +116,21 @@ function render(rt){
   for(const s of shots) blit(ball,s.x,s.y,1);
   for(const f of foes) drawShard(ctx,f.x,f.y,f.r,Math.atan2(f.vy,f.vx));
   for(const b of bolts) if(b.t>=BOLT_WARN) drawBoltStrike(b);          // 하늘에서 내리꽂히는 눈벼락
-  for(const p of parts){ p.x+=p.vx*rdt; p.y+=p.vy*rdt; p.vx*=.93; p.vy*=.93; p.life-=rdt; ctx.globalAlpha=Math.max(0,Math.min(1,p.life*2)); ctx.fillStyle=p.col; circ(ctx,p.x,p.y,p.r); }
+  // 입자: 화면 밖은 그리지 않고, 색·투명도 단계별로 한 경로에 모아 fill 호출을 줄임
+  partGroups.clear();
+  for(const p of parts){
+    p.x+=p.vx*rdt; p.y+=p.vy*rdt; p.vx*=.93; p.vy*=.93; p.life-=rdt;
+    if(p.life<=0 || p.x<gx0||p.x>gx1||p.y<gy0||p.y>gy1) continue;
+    const a=Math.max(.25,Math.min(1,p.life*2)), key=p.col+'|'+(Math.round(a*4)/4);
+    let path=partGroups.get(key); if(!path){ path=new Path2D(); partGroups.set(key,path); }
+    path.moveTo(p.x+p.r,p.y); path.arc(p.x,p.y,p.r,0,TAU);
+  }
+  for(const [key,path] of partGroups){ const i=key.lastIndexOf('|'); ctx.globalAlpha=+key.slice(i+1); ctx.fillStyle=key.slice(0,i); ctx.fill(path); }
   ctx.globalAlpha=1; sweep(parts,p=>p.life>0);
   ctx.font='14px Jua, "Malgun Gothic", sans-serif'; ctx.textAlign='center';
-  for(const t of texts){ t.y-=28*rdt; t.life-=rdt; ctx.globalAlpha=Math.max(0,Math.min(1,t.life*2)); ctx.fillStyle=t.col; ctx.fillText(t.txt,t.x,t.y); }
+  for(const t of texts){ t.y-=28*rdt; t.life-=rdt;
+    if(t.life<=0 || t.x<gx0||t.x>gx1||t.y<gy0||t.y>gy1) continue;   // 화면 밖 피해 숫자는 건너뜀
+    ctx.globalAlpha=Math.max(0,Math.min(1,t.life*2)); ctx.fillStyle=t.col; ctx.fillText(t.txt,t.x,t.y); }
   ctx.globalAlpha=1; sweep(texts,t=>t.life>0);
   ctx.restore();
 
