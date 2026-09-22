@@ -77,3 +77,34 @@ h2.display{margin:0;font-size:32px;line-height:1.15;text-wrap:balance}
   .clock small{font-size:10px}
 }
 @media (prefers-reduced-motion:reduce){ .btn,.card,#banner{transition:none} }
+
+/* 랭킹 */
+.ov{place-items:safe center}
+.btn-sub{justify-self:stretch;border:1.5px solid rgba(242,193,78,.55);border-radius:12px;padding:10px 16px;background:transparent;color:var(--gold);font-family:"Jua",sans-serif;font-size:17px;cursor:pointer}
+.btn-sub:hover{background:rgba(242,193,78,.1)}
+.btn-sub:disabled{opacity:.5;cursor:default}
+.btn-sub:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.rank-form{display:grid;gap:8px;margin:0}
+.rank-form label{font-size:13px;color:var(--muted);letter-spacing:.04em}
+.rank-row{display:flex;gap:8px}
+.rank-row .btn-sub{justify-self:auto;flex:none}
+#nick{flex:1;min-width:0;background:var(--card);border:1.5px solid var(--card2);border-radius:12px;padding:10px 12px;color:var(--ink);font:17px "Jua","Gowun Dodum",sans-serif}
+#nick::placeholder{color:#7f8fa9}
+#nick:focus{outline:none;border-color:var(--gold)}
+#nick{-webkit-user-select:text;user-select:text}
+.rk-msg{margin:0;font-size:13px;color:var(--muted);min-height:1em}
+.rk-msg:empty{display:none}
+.rk-msg.err{color:#ff8f88}
+.rank-wrap{display:grid;gap:8px}
+.rk-mine{margin:0;font-family:"Jua",sans-serif;font-size:20px;color:var(--gold)}
+.board{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-variant-numeric:tabular-nums}
+.board li{display:grid;grid-template-columns:2em 1fr auto 4.5em;gap:10px;align-items:center;background:var(--card);border-radius:10px;padding:7px 12px;font-size:14px}
+.board .rk-no{font-family:"Jua",sans-serif;font-size:16px;color:var(--muted);text-align:center}
+.board .rk-nm{font-family:"Jua",sans-serif;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .rk-rec{color:var(--ink)}
+.board .rk-k{color:var(--muted);text-align:right}
+.board .top1 .rk-no{color:var(--gold)}
+.board .top2 .rk-no{color:#d7e1ee}
+.board .top3 .rk-no{color:#e0a068}
+.board li.me{background:var(--card2);outline:1.5px solid var(--gold)}
+.board .rk-empty{display:block;text-align:center;color:var(--muted)}

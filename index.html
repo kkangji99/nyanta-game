@@ -36,6 +36,7 @@
       </div>
       <p class="controls">이동 <kbd>WASD</kbd> <kbd>방향키</kbd> · 모바일은 화면을 끌어서 이동 · 공격은 자동 · 일시정지 <kbd>P</kbd> · 2분마다 <b class="hl">집사 찬스</b>: 10초간 무적·연사</p>
       <button class="btn" id="startBtn" type="button">배달 출발!</button>
+      <button class="btn-sub" id="rankBtn" type="button">명예의 전당 TOP 10</button>
       <p class="best" id="bestTxt"></p>
     </div>
   </section>
@@ -68,8 +69,32 @@
         <div><dt>먹은 고등어</dt><dd id="rFish">0</dd></div>
         <div><dt>레벨</dt><dd id="rLv">1</dd></div>
       </dl>
+      <form class="rank-form" id="rankForm" hidden autocomplete="off">
+        <label for="nick">랭킹에 이름 남기기</label>
+        <div class="rank-row">
+          <input id="nick" name="nick" maxlength="8" placeholder="닉네임 (8자까지)" enterkeyhint="done">
+          <button class="btn-sub" id="rankSubmit" type="submit">등록</button>
+        </div>
+        <p class="rk-msg" id="rankMsg" role="status"></p>
+      </form>
+      <div class="rank-wrap" id="endBoardWrap" hidden>
+        <p class="rk-mine" id="endRankTxt"></p>
+        <ol class="board" id="endBoard"></ol>
+        <p class="rk-msg" id="endBoardMsg" role="status"></p>
+      </div>
       <button class="btn" id="againBtn" type="button">다시 도전</button>
       <p class="best" id="bestTxt2"></p>
+    </div>
+  </section>
+
+  <section class="ov" id="ovRank" hidden>
+    <div class="panel">
+      <div class="eyebrow">온라인 랭킹</div>
+      <h2 class="display">명예의 전당</h2>
+      <p class="lead">배달 성공 → 오래 버틴 순 → 많이 물리친 순.</p>
+      <ol class="board" id="titleBoard"></ol>
+      <p class="rk-msg" id="titleBoardMsg" role="status"></p>
+      <button class="btn" id="rankClose" type="button">돌아가기</button>
     </div>
   </section>
 </div>
@@ -81,6 +106,7 @@
 <script src="js/state.js"></script>
 <script src="js/input.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/ranking.js"></script>
 <script src="js/gameplay.js"></script>
 <script src="js/render.js"></script>
 <script src="js/main.js"></script>

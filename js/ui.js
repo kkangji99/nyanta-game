@@ -9,7 +9,7 @@ showBest();
 
 /* ---------- flow ---------- */
 let redraw=true;
-function show(id){ ['ovTitle','ovChoose','ovPause','ovEnd'].forEach(o=>$(o).hidden=o!==id); redraw=true; }
+function show(id){ ['ovTitle','ovChoose','ovPause','ovEnd','ovRank'].forEach(o=>$(o).hidden=o!==id); redraw=true; }
 addEventListener('resize',()=>{ redraw=true; });
 function start(){ reset(); state='play'; show(null); $('hud').hidden=false; banner('눈사람 군단이 몰려온다!'); }
 function pause(){ state='pause'; joy=null; show('ovPause'); $('resumeBtn').focus(); }
@@ -55,5 +55,6 @@ function end(win){
   $('endTitle').textContent = win?'메리 크리스마스! 아침이 밝았다':'냥타가 지쳐 쓰러졌어요';
   $('endLead').textContent = win ? '눈보라가 그치고 해가 떴다. 눈사람 군단은 녹아내리고, 선물은 무사히 도착했다.' : `크리스마스 아침까지 ${fmt(GAME_LEN-T)} 남았었다. 고등어 한 입 먹고 다시 출발하자.`;
   $('rTime').textContent=fmt(surv); $('rKills').textContent=kills; $('rFish').textContent=fishGot; $('rLv').textContent=P.level;
+  rankOnEnd(win);
   show('ovEnd'); $('againBtn').focus({preventScroll:true});
 }
