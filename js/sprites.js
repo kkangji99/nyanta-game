@@ -27,6 +27,17 @@ function drawCat(g,x,y,f,t,moving){
   g.beginPath(); g.moveTo(-10,6); g.quadraticCurveTo(-23,3+Math.sin(t*5)*4,-18,-9+Math.sin(t*5)*3); g.stroke();
   // legs
   g.fillStyle='#d9803a'; ell(g,-6,13+b,4,3.2); ell(g,6,13-b,4,3.2);
+  // 등에 멘 선물 보따리 (몸통보다 먼저 그려서 뒤에 있는 것처럼 보이게)
+  g.save(); g.translate(-12,1-b*.6); g.rotate(-.18);
+  g.fillStyle='#c9303c'; ell(g,0,1,9.5,8.5);              // 자루
+  g.fillStyle='#a8262f'; ell(g,-2.5,3.5,6.5,5.5);         // 아래쪽 그늘
+  g.fillStyle='#e04a4f'; ell(g,2.5,-2,4,3.2);             // 위쪽 하이라이트
+  g.fillStyle='#c9303c';                                   // 묶어 올린 주둥이
+  g.beginPath(); g.moveTo(-4.5,-6.5); g.quadraticCurveTo(-2,-13,4,-14.5);
+  g.quadraticCurveTo(3,-10,4.5,-6); g.closePath(); g.fill();
+  g.strokeStyle='#f2c14e'; g.lineWidth=2; g.lineCap='round';   // 금색 끈
+  g.beginPath(); g.moveTo(-4.5,-6); g.quadraticCurveTo(0,-8,4.5,-6.5); g.stroke();
+  g.restore();
   // body
   g.fillStyle='#f0a050'; ell(g,0,4,13,10);
   g.fillStyle='#fff6ea'; ell(g,4,7,6,5);
@@ -46,23 +57,33 @@ function drawCat(g,x,y,f,t,moving){
   g.fillStyle='#e0707c'; circ(g,8,-5.5,1.4);
   g.strokeStyle='rgba(29,36,51,.55)'; g.lineWidth=.8;
   g.beginPath(); g.moveTo(12,-5); g.lineTo(18,-6.5); g.moveTo(12,-4); g.lineTo(18,-3.5); g.stroke();
-  // 산타 모자: 머리(중심 4,-8 반지름 11) 위에 얹히고, 끝이 뒤쪽(왼쪽)으로 늘어짐
-  g.fillStyle='#c9303c';
+  // 산타 모자: 머리(중심 4,-8 / 반지름 11) 위에 눌러쓴 형태. 머리 중심 기준으로 그려서 어긋나지 않게 함
+  // 좌우를 뒤집어 고깔이 앞쪽(고양이가 보는 방향)으로 솟고 방울은 뒤로 늘어지게 함
+  g.save(); g.translate(4,-8); g.scale(-1,1); g.rotate(.16);   // 꼬리 쪽으로 기울여 눌러쓴 모양
+  g.fillStyle='#e04a3d';                          // 몸통(밝은 빨강)
   g.beginPath();
-  g.moveTo(-6,-16);                       // 머리 왼쪽 테두리
-  g.bezierCurveTo(-4,-27,3,-32,7,-31);    // 고깔이 위로 솟았다가
-  g.bezierCurveTo(-1,-28,-6,-26,-11,-27); // 뒤로 꺾여 늘어짐
-  g.bezierCurveTo(-9,-23,-7,-20,-6,-16);
+  g.moveTo(-10.5,-10.5);
+  g.bezierCurveTo(-12.5,-21,-4,-26,3,-25);        // 왼쪽 위로 부풀어 오른 봉우리
+  g.bezierCurveTo(10,-24,13.5,-17,12,-11.5);      // 오른쪽으로 흘러내려 방울까지
   g.closePath(); g.fill();
-  g.fillStyle='#d23a44';                  // 앞쪽 면(밝은 빨강)
-  g.beginPath(); g.moveTo(-6,-16); g.bezierCurveTo(-2,-28,4,-31,7,-31); g.bezierCurveTo(9,-26,12,-20,14,-17); g.closePath(); g.fill();
-  g.fillStyle='#fff6ea';                  // 흰 테두리
-  g.beginPath(); g.roundRect(-8,-19,23,6,3); g.fill();
-  g.fillStyle='#e8dfd0'; g.beginPath(); g.roundRect(-8,-14.5,23,1.5,.7); g.fill();
-  g.fillStyle='#fff6ea'; circ(g,-12,-27,4);   // 방울
-  g.fillStyle='#e8dfd0'; circ(g,-13.5,-25.5,1.6);
+  g.fillStyle='#ad3128';                          // 접힌 안쪽 면(아래쪽 그늘)
+  g.beginPath();
+  g.moveTo(-10.5,-10.5);
+  g.bezierCurveTo(-12,-17,-7,-21,-1,-20.5);
+  g.bezierCurveTo(6,-20,10,-15,11.5,-11);
+  g.closePath(); g.fill();
+  g.strokeStyle='#a62f27'; g.lineWidth=1.3; g.lineCap='round';   // 접힌 주름선
+  g.beginPath(); g.moveTo(3,-22); g.bezierCurveTo(6,-19,8,-15,9,-11.5); g.stroke();
+  g.fillStyle='#f7f7f7';                          // 흰 밴드 (머리 꼭대기를 덮도록 걸침)
+  g.beginPath(); g.roundRect(-12,-12.5,24.5,6.5,3.2); g.fill();
+  g.fillStyle='#e2e2e2'; g.beginPath(); g.roundRect(-12,-8,24.5,2,1); g.fill();
+  g.fillStyle='#f7f7f7'; circ(g,13.5,-9.5,4.3);   // 방울(밴드 오른쪽 끝에 걸침)
+  g.fillStyle='#e2e2e2'; circ(g,14.8,-8.3,1.8);
+  g.restore();
   // scarf
   g.fillStyle='#2d6a4f'; g.beginPath(); g.roundRect(-3,-1,14,4,2); g.fill(); g.fillRect(-2,1,4,7);
+  // 보따리 끈을 붙잡은 앞발
+  g.fillStyle='#e8953f'; ell(g,-9.5,1-b*.6,3.2,2.6);
   g.restore();
 }
 
